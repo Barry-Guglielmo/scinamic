@@ -7,3 +7,4 @@ mol_file_cache
 .DS_Store
 config.py
 *.log
+*pycache*
