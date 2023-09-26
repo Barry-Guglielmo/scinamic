@@ -134,5 +134,12 @@ class Session:
 			'description': description}
 		return self.post('upload_document',params,filepath);  
 
+	def render_resultcurve(self,pk):
+		params = {'auth_token':self.auth_token,
+			'resultcurve_pk':pk,
+			'width':400,
+			'height':300,
+			'x_axis_scale':'log(10)'}
+		return self.post('render_resultcurve',params);
 
 

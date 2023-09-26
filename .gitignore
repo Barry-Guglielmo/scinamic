@@ -8,3 +8,5 @@ mol_file_cache
 config.py
 *.log
 *pycache*
+logs/*
+*.db

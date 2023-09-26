@@ -33,3 +33,18 @@ def add_studies_to_ss():
 def add_assay_to_ss():
     Assay.register(key = i['document'])
     # assay = Assay.get(key=i['document'])
+
+def create_plots_db():
+    conn = sqlite3.connect(IMAGE_SERVICE_DB_CONFIG['path'])
+    cursor = conn.cursor()
+    table_schema = """
+                    CREATE TABLE IF NOT EXISTS images (
+                        top_folder TEXT,
+                        middle_folder TEXT,
+                        bottom_folder TEXT,
+                        image_data BLOB
+                    );
+                    """
+    cursor.execute(table_schema)
+    conn.commit()
+    conn.close()

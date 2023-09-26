@@ -165,36 +165,4 @@ def assay_map(results):
 
             except:
                x=0
-# def assay_map(scinamic_compounds, ss_session):
-
-# compound_map(session, 'CPD1234')
-# Project = ?
-# Compound = ?
-#     I assume this is the kingpin
-# EntityAlias = ?
-# CompoundProject = ?
-# Lot = ?
-# LotProject = ?
-# Assay = ?
-# Experiment = ?
-# Document = ?
-# Page = ?
-
-# CompoundProperty=?
-# CompoundObservation=?
-# CompoundObservationProject=?
-
-# LotProperty=?
-# LotObservation=?
-# LotObservationProject=?
-# File=?
-# GenericEntity=?
-# GenericEntityProject=?
-# GenericEntityObservation=?
-# GenericEntityObservationProject=?
-
-# Structure=?
-# Pose=?
-# PoseObservation=?
-# PoseObservationProject=?
 

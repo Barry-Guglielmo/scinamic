@@ -2,6 +2,10 @@
 
 import requests
 import json
+import base64
+from PIL import Image
+import io
+import sqlite3
 from scinamic_api_wrappers import *
 from config import *
 from simpleschema.schemas import SimpleSchema
@@ -15,34 +19,27 @@ def SimpleSchema_Session(SIMPLE_SCHEMA_DB_CONFIG):
                         port=SIMPLE_SCHEMA_DB_CONFIG["port"], 
                         host=SIMPLE_SCHEMA_DB_CONFIG["host"])
 
-def Scinamic_Session(config):
-        session = Session(config["url"],config["user"],config["password"])
+def Scinamic_Session(SCINAMIC_API_CONFIG):
+        session = Session(SCINAMIC_API_CONFIG["url"],SCINAMIC_API_CONFIG["user"],SCINAMIC_API_CONFIG["password"])
         session.login()
         return session
 
 class Scinamic_Compounds:
     '''
-           {'pk': '7249403', 'id': 'ALK-0005548', 
-            'creation_user': 'cquesnelle', 
-            'creation_date': '2023-05-04 16:48:02', 
-            'lastedit_user': '', 
-            'projects': 'A&CSP1', 
-            'mw': '843.9121', 
-            'exact_mass': '843.2911', 
-            'formula': 'C42H41N11O7S', 
-            'smiles': '', 
-            'stereochemistry': 'RACEMIC', 
-            'lg_formula': 'NA', 
-            'hb_donor_count': '3', 
-            'ring_count': '8', 
-            'aromatic_ring_count': '6', 
-            'xlogp': '2.93', 
-            'alogp': '3.3698', 
-            'tpsa': '250.72', 
-            'lipinski_failures': '3', 
-            'active': 'true', 
-            'group': 'A&CSP1', 
-            'entity': 'Compound'}
+    Python class that stores compound data.
+
+    :param session: This takes a Scinamic_Session
+    :type session: scinamic_api_wrappers.Session
+    :return: returns a python Class for Scinamic Compounds
+    :rtype: class    
+
+    Example usage:
+
+    >>> s = Scinamic_Session(SCINAMIC_API_CONFIG)
+    >>> compounds = Scinamic_Compounds(s)
+    >>> compounds.get_all_data()
+    >>> compounds.data[0] # first compund info as dict
+
     '''
     def __init__(self, session):
         # we may need multiple calls, but lets start simple
@@ -64,13 +61,7 @@ class Scinamic_Compounds:
 
 class Audit:
     """
-      {'record': 1664067, 
-      'pk': 3465808, 
-      'time': '2021-05-17 02:39:23', 
-      'type': 'D', 
-      'user': 'admin'}
-
-    This is a good one to start from 4054032
+    TODO: Fill in
     """
     def __init__(self, session, min_audit_pk = None):
         self.session = session
@@ -98,11 +89,11 @@ class Audit:
         self.audit_record_pks = [i['pk'] for i in self.data]
 
 class Scinamic_Analysis:
-    '''Returns Analysis, Results, CompoundBatch Data'''
+    '''
+    Python class that stores Analysis Data
+    '''
     def __init__(self, session):
-        # we may need multiple calls, but lets start simple
         self.session = session
-        # Results PK
         self.pks = session.search_records("analysis","pks",[""]).data
         n = 1000 # the size of chunk (1000 is the max)
         self.chunk_pks = [self.pks[i * n:(i + 1) * n] for i in range((len(self.pks) + n - 1) // n )]
@@ -114,7 +105,9 @@ class Scinamic_Analysis:
             self.data+=chunk
         
 class Scinamic_Results:
-    '''Returns Analysis, Results, CompoundBatch Data'''
+    '''
+    Python class that stores Results data
+    '''
     def __init__(self, session):
         # we may need multiple calls, but lets start simple
         self.session = session
@@ -130,7 +123,9 @@ class Scinamic_Results:
             self.data+=chunk
         
 class Scinamic_CompoundBatches:
-    '''Returns Analysis, Results, CompoundBatch Data'''
+    '''
+     Python class that returns CompoundBatch Data
+    '''
     def __init__(self, session):
         # we may need multiple calls, but lets start simple
         self.session = session
@@ -146,18 +141,8 @@ class Scinamic_CompoundBatches:
             self.data+=chunk
        
 class Scinamic_Projects:
-    """Returns Projects
-    
-    {'pk': '6784367',
-    'id': 'CCNE',
-    'creation_user': 'epark',
-    'creation_date': '2022-07-12 09:45:31',
-    'lastedit_user': 'epark',
-    'lastedit_date': '2022-07-12 16:01:08',
-    'alias': 'CCNE1',
-    'active': 'true',
-    'external_id': 'ALK-P005',
-    'entity': 'Project'}
+    """
+    Python class Returns Projects data
     """
     def __init__(self, session):
         # we may need multiple calls, but lets start simple
@@ -178,20 +163,11 @@ class Scinamic_Projects:
             self.name[i['id']]=i
             
 class Scinamic_Studies:
-    """Returns Studies
-    
-    {'pk': '6780427',
-    'id': 'Caco-2 Permeability',
-    'creation_user': 'klazarski',
-    'creation_date': '2022-07-01 14:29:02',
-    'lastedit_user': '',
-    'tags': 'Permeability, ADME',
-    'entity': 'Study'}
+    """
+    Python class Returns Studies data
     """
     def __init__(self, session):
-        # we may need multiple calls, but lets start simple
         self.session = session
-        # Results PK
         self.pks = session.search_records("study","pks",[]).data
         n = 1000 # the size of chunk (1000 is the max)
         self.chunk_pks = [self.pks[i * n:(i + 1) * n] for i in range((len(self.pks) + n - 1) // n )]
@@ -201,32 +177,42 @@ class Scinamic_Studies:
         for i in self.chunk_pks:
             chunk = self.session.get_records(i).data
             self.data+=chunk
-# search_records("compoundbatch","pks",[""]).data
-# import base64
-# from PIL import Image
-# import io
-# import sqlite3
 
-# class Scinamic_Curve:
-#     def __init__(self, session):
-#         # we may need multiple calls, but lets start simple
-#         self.session = session
-#         # Results PK
-#         self.curve_data = session.get_curve(6927177).data
-#         decoded_data = base64.b64decode(self.curve_data)
 
-#         # Create an in-memory stream
-#         image_stream = io.BytesIO(decoded_data)
-
-#         # Open the image stream using PIL
-#         image = Image.open(image_stream)
-#     def insert_image_into_database(image, top_folder, middle_folder, bottom_folder):
-#         conn = sqlite3.connect('../plots.db')  # Replace with your database name
-#         cursor = conn.cursor()
-
-#         cursor.execute('INSERT INTO images (top_folder,middle_folder,bottom_folder, image_data) VALUES (?, ?, ?, ?)', (top_folder,middle_folder,bottom_folder, image))
-
-#         conn.commit()
-#         conn.close()
-
-#     insert_image_into_database(image, 'a','b','c')
+class Scinamic_Curves:
+    '''
+    Python class to import, convert, and upload curves to the livedesign image_service
+    '''
+    def __init__(self, session):
+        self.session = session
+        self.pks = session.search_records("ResultCurve","pks",[]).data
+       
+    def render(self, curve_pk, show = False):
+        curve_string = self.session.render_resultcurve(curve_pk)
+        decoded_data = base64.b64decode(curve_string.data)
+        image_stream = io.BytesIO(decoded_data)
+        if show == True:
+            image = Image.open(image_stream)
+        return image_stream.read()
+    
+    def render_to_db(self, curve_pk, conn, top_folder = 'scinamic', middle_folder = 'curves'):
+        cursor = conn.cursor()
+        image_data = self.render(curve_pk)         
+        cursor.execute('INSERT INTO images (top_folder, middle_folder, bottom_folder, image_data) VALUES (?, ?, ?, ?)', (top_folder, middle_folder, str(curve_pk), image_data))
+        conn.commit()
+    
+    def check_db(self, curve_pk, conn, top_folder = 'scinamic', middle_folder = 'curves'):
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM images WHERE (top_folder, middle_folder, bottom_folder) = (?, ?, ?)', (top_folder, middle_folder, str(curve_pk)))
+        return cursor.fetchall()
+    
+    def render_all_to_db(self):
+        conn = sqlite3.connect(IMAGE_SERVICE_DB_CONFIG['path'])
+        for i in self.pks:
+            try:
+                # if nothing returned from db insert it
+                if self.check_db(i, conn) == []:
+                    self.render_to_db(i, conn)
+            except:
+                some_error = 0
+        conn.close()
