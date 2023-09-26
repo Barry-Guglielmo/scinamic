@@ -1,0 +1,9 @@
+scinamic/config.py
+curves.db
+mol_file_cache
+*.swp
+*.save
+*.ipynb*
+.DS_Store
+config.py
+*.log
