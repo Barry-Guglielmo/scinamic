@@ -48,9 +48,8 @@ def etl(sci_session, ss_session, cursor, full_reload = False):
     '''
 
     print("Starting the Scinamic to LiveDesign ETL")
-    ld_last_audit = ld_last_audit_record(cursor)
-    print(type(ld_last_audit))
-    if ld_last_audit == 0 or full_reload == True:
+    #ld_last_audit = ld_last_audit_record(cursor)
+    if full_reload == True:
         print("Full Reload...\nStarting from the beginning of time...\nWill save the latest audit hash.")
         etl_run_type = "full_reload" # this might just turn into a query for the "first hash" or such...
     else:

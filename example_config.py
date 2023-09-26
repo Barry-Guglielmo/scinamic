@@ -18,6 +18,17 @@ SIMPLE_SCHEMA_DB_CONFIG = {
                            "port": '5432' # on production 3427 on local probably 5432
                            }
 
+# with k8s this will be set to cloud sql or persistant volume
+IMAGE_SERVICE_DB_CONFIG = {
+                            'path':'plots.db'
+                          }
+
+# will be used in pivot name
+PIVOT_DELIMITER = " "
+
+# Alias assay or pivoted assays
+ASSAY_ALIAS = {}
+
 # NOTE: Change in names on LD side will break this! Only specified Projects will be brought over
 # No automated system for creating LD projects. Please create project manually.
 SCINAMIC_PROJECTS_CONFIG = {
