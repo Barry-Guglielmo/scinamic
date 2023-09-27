@@ -12,6 +12,7 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument('-f', '--full_reload',action='store_true', required=False)      # Do a full reload of the data to simple schema
 parser.add_argument('-d', '--delete_data',action='store_true', required=False)      # Delete data in SimpleSchema Scinamic DB
+parser.add_argument('-a', '--assay_only',action='store_true', required=False)      # Delete data in SimpleSchema Scinamic DB
 
 args = parser.parse_args()
 
@@ -35,7 +36,9 @@ if __name__ == '__main__':
 
     # Full Reload if arg is set
     if args.full_reload == True:
-        etl(sci_session, ss_session, cursor, full_reload=True)
+        etl(sci_session, ss_session, cursor, etl_run_type='full_reload')
+    if args.assay_only == True:
+        etl(sci_session, ss_session, cursor, etl_run_type='assay_only')
     else:
         # Note: Full reload will occur if there isn't an Audit > 0 in the scinamic_audit table in SimpleSchema
         etl(sci_session, ss_session, cursor)

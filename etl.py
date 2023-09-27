@@ -9,7 +9,6 @@ import psycopg2
 from api import *
 from config import *
 from map import *
-# from map import *
 
 
 def create_cursor(SIMPLE_SCHEMA_DB_CONFIG):
@@ -42,22 +41,16 @@ def ss_is_empty():
 
 
 
-def etl(sci_session, ss_session, cursor, full_reload = False):
+def etl(sci_session, ss_session, cursor, etl_run_type = 'audit'):
     '''
     Run the ETL pipeline on appropriate data points (All or Updated)
     '''
 
     print("Starting the Scinamic to LiveDesign ETL")
     #ld_last_audit = ld_last_audit_record(cursor)
-    if full_reload == True:
-        print("Full Reload...\nStarting from the beginning of time...\nWill save the latest audit hash.")
-        etl_run_type = "full_reload" # this might just turn into a query for the "first hash" or such...
-    else:
-        etl_run_type = "sequential_load"
-
     print("ETL Run Type:" + etl_run_type)
 
-    if etl_run_type == 'full_reload' or ld_last_audit == 0:
+    if etl_run_type == 'full_reload':
         # put in nuking the db
         compounds = Scinamic_Compounds(sci_session)
         compounds.get_all_data()
@@ -68,6 +61,10 @@ def etl(sci_session, ss_session, cursor, full_reload = False):
         results.get_all_data()
         assay_map(results)
         # update audit
+    elif etl_run_type == 'assay_only':
+        results = Scinamic_Results(sci_session)
+        results.get_all_data()
+        assay_map(results)
     else:
         audit = Audit(sci_session, ld_last_audit)
         return "starting at hash record %s"%ld_last_audit

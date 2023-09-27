@@ -115,7 +115,7 @@ def assay_map(results):
                         # pivot = True
                         assay_key = i["study"]
                         for piv in PIVOT_CONDITIONS[i["study"]]:
-                            assay_key += "%s%s"%(PIVOT_DILIMITER,i[piv])
+                            assay_key += "%s%s"%(PIVOT_DELIMITER,i[piv])
                     else:
                         # pivot = False
                         assay_key = i["study"]
@@ -146,10 +146,10 @@ def assay_map(results):
                                                             value_operator = value_operator
                                                             )
                     else:
-                        co = CompoundObservation.register(compound = compound, 
-                                                            assay = assay, 
-                                                            endpoint = i['value_type'], 
-                                                            num_text = i['value_text'],
+                        co = CompoundObservation.register(compound = compound,
+                                                            assay = assay,
+                                                            endpoint = i['value_type'],
+                                                            text_value = i['value_text'],
                                                             unit = unit,
                                                             value_operator = value_operator
                                                             )
@@ -157,30 +157,31 @@ def assay_map(results):
                     if ',' in i['project']:
                         ps = i['project'].split(',')
                         for p in ps:
-                            CompoundObservationProject.register(compound_observation=co, 
+                            CompoundObservationProject.register(compound_observation=co,
                                         project=Project.get(key=p))
                     else:
-                        CompoundObservationProject.register(compound_observation=co, 
+                        CompoundObservationProject.register(compound_observation=co,
                                         project=Project.get(key=i['project']))
 
                     # Map Curves
                     if 'resultcurve' in i:
                         # this will just add the endpoint we image service will have.
                         # there is a seperate function to load curves because they are SLOW to render
-                        rc = CompoundObservation.register(compound = compound, 
-                                                            assay = assay, 
+                        rc = CompoundObservation.register(compound = compound,
+                                                            assay = assay,
                                                             endpoint = 'ResultCurve', # we will want other info here
-                                                            num_text = '/scinamic/curves/%i'%i['resultcurve']
+                                                            text_value ='<img src="https://www.w3schools.com/images/lamp.jpg" alt="Lamp" width="32" height="32">'
+#                                                            text_value = '<img style="width: 100%; height: 100%;" src="/livedesign/images/scinamic/curves/%s">'%str(i['resultcurve'])
                                                             )
                         # handle the project ACLs
                         if ',' in i['project']:
                             ps = i['project'].split(',')
                             for p in ps:
-                                CompoundObservationProject.register(compound_observation=rc, 
+                                CompoundObservationProject.register(compound_observation=rc,
                                             project=Project.get(key=p))
                         else:
-                            CompoundObservationProject.register(compound_observation=rc, 
+                            CompoundObservationProject.register(compound_observation=rc,
                                             project=Project.get(key=i['project']))
 
             except:
-               x=0
+                x = 0
