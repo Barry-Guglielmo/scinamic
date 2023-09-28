@@ -186,7 +186,7 @@ class Scinamic_Curves:
     def __init__(self, session):
         self.session = session
         self.pks = session.search_records("ResultCurve","pks",[]).data
-       
+
     def render(self, curve_pk, show = False):
         curve_string = self.session.render_resultcurve(curve_pk)
         decoded_data = base64.b64decode(curve_string.data)
@@ -194,25 +194,25 @@ class Scinamic_Curves:
         if show == True:
             image = Image.open(image_stream)
         return image_stream.read()
-    
-    def render_to_db(self, curve_pk, conn, top_folder = 'scinamic', middle_folder = 'curves'):
-        cursor = conn.cursor()
-        image_data = self.render(curve_pk)         
-        cursor.execute('INSERT INTO images (top_folder, middle_folder, bottom_folder, image_data) VALUES (?, ?, ?, ?)', (top_folder, middle_folder, str(curve_pk), image_data))
-        conn.commit()
-    
-    def check_db(self, curve_pk, conn, top_folder = 'scinamic', middle_folder = 'curves'):
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM images WHERE (top_folder, middle_folder, bottom_folder) = (?, ?, ?)', (top_folder, middle_folder, str(curve_pk)))
-        return cursor.fetchall()
-    
+
+    def render_to_db(self, curve_pk):
+        image_data = self.render(curve_pk)
+        data = {"first": "scinamic", "second": 'curves'}
+        file = {'file': (curve_pk, image_data)}
+        response = requests.post(API_UPLOAD_URL, files=file, data=data )
+        print(response)
+
+    def check_db(self, curve_pk):
+        # broken for now
+        data = {"first": "scinamic", "second": 'curves'}
+        response = requests.get(API_CHECK_URL, data=data)
+        if response.text == 'True':
+           return True
+        else:
+           return False
+
     def render_all_to_db(self):
-        conn = sqlite3.connect(IMAGE_SERVICE_DB_CONFIG['path'])
         for i in self.pks:
-            try:
-                # if nothing returned from db insert it
-                if self.check_db(i, conn) == []:
-                    self.render_to_db(i, conn)
-            except:
-                some_error = 0
-        conn.close()
+            # if nothing returned from db insert it
+            if self.check_db(i) == []:
+                self.render_to_db(i)
