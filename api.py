@@ -31,7 +31,7 @@ class Scinamic_Compounds:
     :param session: This takes a Scinamic_Session
     :type session: scinamic_api_wrappers.Session
     :return: returns a python Class for Scinamic Compounds
-    :rtype: class    
+    :rtype: class
 
     Example usage:
 
@@ -198,9 +198,8 @@ class Scinamic_Curves:
     def render_to_db(self, curve_pk):
         image_data = self.render(curve_pk)
         data = {"first": "scinamic", "second": 'curves'}
-        file = {'file': (curve_pk, image_data)}
-        response = requests.post(API_UPLOAD_URL, files=file, data=data )
-        print(response)
+        file = {'file': (str(curve_pk), image_data)}
+        requests.post(API_UPLOAD_URL, files=file, data=data )
 
     def check_db(self, curve_pk):
         # broken for now
@@ -214,5 +213,8 @@ class Scinamic_Curves:
     def render_all_to_db(self):
         for i in self.pks:
             # if nothing returned from db insert it
-            if self.check_db(i) == []:
-                self.render_to_db(i)
+            if self.check_db(i) == False:
+                try:
+                    self.render_to_db(i)
+                except:
+                    print('error')

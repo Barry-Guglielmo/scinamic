@@ -169,9 +169,8 @@ def assay_map(results):
                         # there is a seperate function to load curves because they are SLOW to render
                         rc = CompoundObservation.register(compound = compound,
                                                             assay = assay,
-                                                            endpoint = 'ResultCurve', # we will want other info here
-                                                            text_value ='<img src="https://www.w3schools.com/images/lamp.jpg" alt="Lamp" width="32" height="32">'
-#                                                            text_value = '<img style="width: 100%; height: 100%;" src="/livedesign/images/scinamic/curves/%s">'%str(i['resultcurve'])
+                                                            endpoint = 'ResultCurve',
+                                                            text_value ='<img style="width: 100%; height: 100%;" src="{}/livedesign/images/scinamic/curves/{}">'.format(BASE_URL, i['resultcurve'])
                                                             )
                         # handle the project ACLs
                         if ',' in i['project']:

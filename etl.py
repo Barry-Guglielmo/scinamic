@@ -60,11 +60,16 @@ def etl(sci_session, ss_session, cursor, etl_run_type = 'audit'):
         results = Scinamic_Results(sci_session)
         results.get_all_data()
         assay_map(results)
-        # update audit
+        # curves
+        curves = Scinamic_Curves(sci_session)
+        curves.render_all_to_db()
     elif etl_run_type == 'assay_only':
         results = Scinamic_Results(sci_session)
         results.get_all_data()
         assay_map(results)
+    elif etl_run_type == 'curves_only':
+        curves = Scinamic_Curves(sci_session)
+        curves.render_all_to_db()
     else:
         audit = Audit(sci_session, ld_last_audit)
         return "starting at hash record %s"%ld_last_audit
