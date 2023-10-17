@@ -51,12 +51,12 @@ def compound_map(scinamic_compounds):
             ld_cmpd.save()
         except:
             # create new ones if needed
-
             try:
                 molfile = Chem.MolToMolBlock(Chem.MolFromSmiles(sci_cmpd['smiles']))
             except:
-                print("error creating molfile")
-            Compound.register(
+                molfile = ''
+            try:
+                Compound.register(
                             corporate_id = sci_cmpd['id'], 
                             customer_key=sci_cmpd['pk'],
                             canonical_smiles = sci_cmpd['smiles'],
@@ -65,33 +65,40 @@ def compound_map(scinamic_compounds):
                             person = sci_cmpd['creation_user'],
                             archived = not sci_cmpd['active']
                             )
-            ld_cmpd = Compound.get(customer_key=sci_cmpd['pk'])
+                ld_cmpd = Compound.get(customer_key=sci_cmpd['pk'])
+                go = True
+            except:
+                print('error processing:\n'+str(sci_cmpd)+'\n')
         # Check that project exists in SS
         # ld_projects = Project.select().execute()
         # ld_project_names = [p.__dict__['__data__']['key'] for p in ld_projects]
         # Breaks if project None
-        if 'projects' in sci_cmpd:
+        if 'projects' in sci_cmpd and go == True:
             sci_cmpd['projects'] =[i.strip() for i in sci_cmpd['projects'].split(',')]
             for p in sci_cmpd['projects']:
-                # get the scinamic projects key
-                sci_proj_key = int(sci_projects.name[p]['pk'])
+                # get the scinamic projects key 
 
+                try:
+                    sci_proj_key = int(sci_projects.name[p]['pk'])
+                except:
+                    x = 0
                 # look it up in our Config table
                 try:
-                    ld_proj_name = SCINAMIC_PROJECTS_CONFIG[sci_proj_key]
+                    ld_proj_names = SCINAMIC_PROJECTS_CONFIG[sci_proj_key]
                 except:
-                    ld_proj_name = None
+                    ld_proj_names = None
                     # Project not in the config. Add it if you want it.
 
                 # if project in Config
-                if ld_proj_name:
-                    # get id of current project
-                    ld_proj_pk = Project.get(customer_key = sci_proj_key).id
-                    # ask if it is in compoundproject
-#                    query = CompoundProject.select().where(CompoundProject.compound_id==ld_cmpd.id, CompoundProject.project_id == ld_proj_pk).execute()
-                    # if compound not registered already to the project put it in
+                if ld_proj_names:
+                    for i in ld_proj_names:
+                        # get id of current project
+                        ld_proj_pk = Project.get(key = i).id
+                        CompoundProject.register(compound_id = ld_cmpd.id, project_id = ld_proj_pk)
+            if SCINAMIC_PROJECTS_CONFIG['GLOBAL']:
+                for i in SCINAMIC_PROJECTS_CONFIG['GLOBAL']:
+                    ld_proj_pk = Project.get(key = i).id
                     CompoundProject.register(compound_id = ld_cmpd.id, project_id = ld_proj_pk)
-
 
 # for after compounds have been added
 def assay_map(results):
@@ -156,12 +163,16 @@ def assay_map(results):
                     # handle the project ACLs
                     if ',' in i['project']:
                         ps = i['project'].split(',')
-                        for p in ps:
+                        for p in ps + SCINAMIC_PROJECTS_CONFIG['GLOBAL']:
                             CompoundObservationProject.register(compound_observation=co,
                                         project=Project.get(key=p))
                     else:
                         CompoundObservationProject.register(compound_observation=co,
                                         project=Project.get(key=i['project']))
+                        for i in SCINAMIC_PROJECTS_CONFIG['GLOBAL']:
+                            CompoundObservationProject.register(compound_observation=co,
+                                        project=Project.get(key=i))
+
 
                     # Map Curves
                     if 'resultcurve' in i:
@@ -175,12 +186,15 @@ def assay_map(results):
                         # handle the project ACLs
                         if ',' in i['project']:
                             ps = i['project'].split(',')
-                            for p in ps:
+                            for p in ps + SCINAMIC_PROJECTS_CONFIG['GLOBAL']:
                                 CompoundObservationProject.register(compound_observation=rc,
                                             project=Project.get(key=p))
                         else:
                             CompoundObservationProject.register(compound_observation=rc,
                                             project=Project.get(key=i['project']))
+                            for i in SCINAMIC_PROJECTS_CONFIG['GLOBAL']:
+                                CompoundObservationProject.register(compound_observation=co,
+                                        project=Project.get(key=i))
 
             except:
                 x = 0

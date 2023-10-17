@@ -8,14 +8,25 @@ def add_projects_to_ss():
 
     SimpleSchema_Session(SIMPLE_SCHEMA_DB_CONFIG)
     for k,v in SCINAMIC_PROJECTS_CONFIG.items():
-        try:
-            mp = Project.get(key = v).execute()
-        except:
+        if str(k) != 'GLOBAL':
             try:
-                Project.register(customer_key = k, key = v)
+                mp = Project.get(key = v[0]).execute()
             except:
-                print("error")
-
+                try:
+                    Project.register(customer_key = k, key = v[0])
+                except:
+                    print("error creating projects")
+        else:
+            i = 0
+            for j in v:
+                 try:
+                     mp = Project.get(key = j).execute()
+                 except:
+                     try:
+                        Project.register(customer_key = i, key = j)
+                     except:
+                         print("error creating projects")
+                 i+=1
 # TBD Not sure how it relates
 def add_studies_to_ss():
     # customer_key = scinamic_project_pk, 
