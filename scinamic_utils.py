@@ -17,7 +17,7 @@ def add_projects_to_ss():
                 except:
                     print("error creating projects")
         else:
-            i = 0
+            i = 1
             for j in v:
                  try:
                      mp = Project.get(key = j).execute()

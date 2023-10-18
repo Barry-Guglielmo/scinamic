@@ -1,6 +1,6 @@
 <h1>Scinamic Integration</h1>
 
-Welcome! The Scinamic integration pulls from Scinamic API and loads into SimpleSchema version 1.2.1 which DI can map back to synaptic using a standard configuration.
+Welcome! The Scinamic integration pulls from Scinamic API and loads into SimpleSchema version 1.2.1+ which DI can map back to synaptic using a standard configuration.
 
 The initial configuration is to run every 15 minutes. For 7K compounds it takes roughly 20 minutes to do a FULL load of the compounds and assay data.
 

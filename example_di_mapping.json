@@ -1,0 +1,214 @@
+{
+  "source_database_settings": {
+    "host": "localhost",
+    "username": "postgres",
+    "password": "postgres",
+    "dbname": "scinamic_upgrade",
+    "port": "3247",
+    "data_source_name": "scinamic_upgrade"
+  },
+  "di_database_settings": {
+    "host": "localhost",
+    "username": "postgres",
+    "password": "postgres",
+    "port": "3247"
+  },
+  "pri_database_settings": {
+    "host": "localhost",
+    "username": "postgres",
+    "password": "postgres",
+    "dbname": "synaptic",
+    "port": "3247"
+  },
+  "livedesign_settings": {
+    "host": "https://<host>.onschrodinger.com/livedesign/api",
+    "username": "demo",
+    "password": "<password>"
+  },
+ "command_settings": {
+    "num_processes": 6
+  },
+  "schemas": [
+    "public"
+  ],
+  "table_joins": [
+    "compoundproject.project_id = project.id",
+    "compoundproject.compound_id = compound.id",
+    "entityalias.compound_id = compound.id",
+    "entityalias.generic_entity_id = genericentity.id",
+    "lot.compound_id = compound.id",
+    "lot.page_id = page.id",
+    "lotproject.project_id = project.id",
+    "lotproject.lot_id = lot.id",
+    "experiment.assay_id = assay.id",
+    "lotobservation.lot_id = lot.id",
+    "lotobservation.assay_id = assay.id",
+    "lotobservation.experiment_id = experiment.id",
+    "lotobservation.document_id = document.id",
+    "lotobservation.page_id = page.id",
+    "lotobservationproject.lot_observation_id = lotobservation.id",
+    "lotobservationproject.project_id = project.id",
+    "compoundobservation.compound_id = compound.id",
+    "compoundobservation.assay_id = assay.id",
+    "compoundobservation.experiment_id = experiment.id",
+    "compoundobservation.document_id = document.id",
+    "compoundobservation.page_id = page.id",
+    "compoundobservationproject.compound_observation_id = compoundobservation.id",
+    "compoundobservationproject.project_id = project.id",
+    "genericentityobservation.generic_entity_id = genericentity.id",
+    "genericentityobservation.assay_id = assay.id",
+    "genericentityobservation.experiment_id = experiment.id",
+    "genericentityobservation.document_id = document.id",
+    "genericentityobservation.page_id = page.id",
+    "genericentityobservationproject.generic_entity_observation_id = genericentityobservation.id",
+    "genericentityobservationproject.project_id = project.id",
+    "lotproperty.lot_id = lot.id",
+    "compoundproperty.compound_id = compound.id",
+    "genericentityproperty.generic_entity_id = genericentity.id",
+    "page.document_id = document.id",
+    "file.project_id = project.id",
+    "genericentity.file_id = file.id",
+    "genericentityproject.generic_entity_id = genericentity.id",
+    "genericentityproject.project_id = project.id",
+    "pose.compound_id = compound.id",
+    "pose.generic_entity_id = genericentity.id",
+    "pose.project_id = project.id",
+    "poseobservation.pose_id = pose.id",
+    "poseobservation.assay_id = assay.id",
+    "poseobservation.experiment_id = experiment.id",
+    "poseobservation.document_id = document.id",
+    "poseobservation.page_id = page.id",
+    "poseobservation.structure_id = structure.id"
+  ],
+  "mappings": {
+    "syn_project": [
+      {
+        "query": "SELECT key AS project_name, key AS alternate_id, COALESCE(description, key) AS project_desc, is_restricted AS is_restricted, CASE WHEN archived = 0 THEN 'Y' ELSE 'N' END AS active FROM project WHERE TRUE"
+      }
+    ],
+    "syn_compound": [
+      {
+        "query": "SELECT c.corporate_id AS corporate_id, c.mol_file AS cd_structure, COALESCE(p.key, 'Default Restricted Project') AS project_name, person AS person_id FROM compound c LEFT JOIN compoundproject cp ON cp.compound_id = c.id AND cp.primary LEFT JOIN project p ON cp.project_id = p.id WHERE c.archived = 0",
+        "surrogate_keys": ["person_id"]
+      }
+    ],
+    "ld_entity_alias": [
+      {
+        "query": "SELECT ca.compound_id AS entity_id, ca.alias AS alias FROM entityalias ca WHERE ca.compound_id IS NOT NULL"
+      },
+      {
+        "query": "SELECT ea.generic_entity_id AS entity_id, ea.alias AS alias FROM entityalias ea WHERE ea.generic_entity_id IS NOT NULL"
+      }
+    ],
+    "ld_entities_projects": [
+      {
+        "query": "SELECT cp.project_id AS project_id, cp.compound_id AS entity_id FROM compoundproject cp JOIN compound c1 ON c1.id = cp.compound_id WHERE c1.archived = 0"
+      },
+      {
+        "query": "SELECT lp.project_id AS project_id, c2.id AS entity_id FROM lotproject lp JOIN lot l ON lp.lot_id = l.id JOIN compound c2 ON l.compound_id = c2.id WHERE c2.archived = 0 AND l.archived = 0"
+      },
+      {
+        "query": "SELECT ep.project_id AS project_id, ep.generic_entity_id AS entity_id FROM genericentityproject ep JOIN genericentity ge ON ge.id = ep.generic_entity_id WHERE ge.archived = 0"
+      }
+    ],
+    "syn_sample": [
+      {
+        "query": "SELECT l.key AS lot_id, l.compound_id AS compound_id, l.salt AS salt_id, COALESCE(l.modified_at, l.created_at) AS reg_date, l.person AS person_id, COALESCE(p.key, p.customer_key, p.id::TEXT) AS document_page FROM lot l LEFT JOIN page p ON l.page_id = p.id WHERE l.archived = 0",
+        "surrogate_keys": ["salt_id", "person_id"]
+      }
+    ],
+    "syn_observation_protocol": [
+      {
+        "query": "SELECT version AS version_num, key AS phenomenon_type_id FROM assay WHERE archived = 0",
+	    "surrogate_keys": ["phenomenon_type_id"]
+      }
+    ],
+    "syn_observation": [
+      {
+        "query": "SELECT lo.lot_id AS observed_item_id, lo.text_value AS cat_obs_phenomenon, lo.endpoint AS type_id, lo.value_operator AS obs_operator, lo.unit AS unit_id, lo.num_value AS quantity, lo.date_value AS date_value, lo.assay_id AS protocol_id, COALESCE(le.key, le.customer_key, le.id::TEXT, '0') AS primary_groupno, le.timestamp AS secondary_groupno_date, lo.std_dev AS quantity_std_dev, lo.conc AS quantity_conc, lo.conc_unit AS quantity_conc_unit, lp.key AS document_page, lo.document_id AS document_id FROM lotobservation lo JOIN assay la ON lo.assay_id = la.id LEFT JOIN experiment le ON lo.experiment_id = le.id LEFT JOIN page lp ON lo.page_id = lp.id WHERE lo.archived = 0",
+        "surrogate_keys": ["quantity_conc_unit", "unit_id", "type_id"]
+      },
+      {
+        "query": "SELECT co.compound_id AS observed_item_id, 1 AS compound_level, co.text_value AS cat_obs_phenomenon, co.endpoint AS type_id, co.value_operator AS obs_operator, co.unit AS unit_id, co.num_value AS quantity, co.date_value AS date_value, co.assay_id AS protocol_id, COALESCE(ce.key, ce.customer_key, ce.id::TEXT, '0') AS primary_groupno, ce.timestamp AS secondary_groupno_date, co.std_dev AS quantity_std_dev, co.conc AS quantity_conc, co.conc_unit AS quantity_conc_unit, cp.key AS document_page, co.document_id AS document_id FROM compoundobservation co JOIN assay ca ON co.assay_id = ca.id LEFT JOIN experiment ce ON co.experiment_id = ce.id LEFT JOIN page cp ON co.page_id = cp.id WHERE co.archived = 0",
+        "surrogate_keys": ["quantity_conc_unit", "unit_id", "type_id"]
+      },
+      {
+        "query": "SELECT eo.generic_entity_id AS observed_item_id, eo.text_value AS cat_obs_phenomenon, eo.endpoint AS type_id, eo.value_operator AS obs_operator, eo.unit AS unit_id, eo.num_value AS quantity, eo.date_value AS date_value, eo.assay_id AS protocol_id, COALESCE(ee.key, ee.customer_key, ee.id::TEXT, '0') AS primary_groupno, ee.timestamp AS secondary_groupno_date, eo.std_dev AS quantity_std_dev, eo.conc AS quantity_conc, eo.conc_unit AS quantity_conc_unit, ep.key AS document_page, eo.document_id AS document_id FROM genericentityobservation eo JOIN assay ea ON eo.assay_id = ea.id LEFT JOIN experiment ee ON eo.experiment_id = ee.id LEFT JOIN page ep ON eo.page_id = ep.id WHERE eo.archived = 0",
+        "surrogate_keys": ["quantity_conc_unit", "unit_id", "type_id"]
+      },
+      {
+        "query": "SELECT po.pose_id AS observed_item_id, po.text_value AS cat_obs_phenomenon, po.endpoint AS type_id, po.value_operator AS obs_operator, po.unit AS unit_id, po.num_value AS quantity, po.date_value AS date_value, po.structure_id AS structure_id, po.assay_id AS protocol_id, COALESCE(pe.key, pe.customer_key, pe.id::TEXT, '0') AS primary_groupno, pe.timestamp AS secondary_groupno_date, po.std_dev AS quantity_std_dev, po.conc AS quantity_conc, po.conc_unit AS quantity_conc_unit, pp.key AS document_page, po.document_id AS document_id FROM poseobservation po JOIN assay pa ON po.assay_id = pa.id LEFT JOIN experiment pe ON po.experiment_id = pe.id LEFT JOIN page pp ON po.page_id = pp.id WHERE po.archived = 0",
+        "surrogate_keys": ["quantity_conc_unit", "unit_id", "type_id"]
+      },
+      {
+        "query": "SELECT lotproperty.lot_id AS observed_item_id, lotproperty.text_value AS cat_obs_phenomenon, 'DATA_INTEGRATED_DATABASE_COLUMN' AS type_id, lotproperty.num_value AS quantity, lotproperty.date_value AS date_value, lotproperty.key AS protocol_id FROM lotproperty WHERE archived = 0",
+        "surrogate_keys": ["type_id", "protocol_id"]
+      },
+      {
+        "query": "SELECT compoundproperty.compound_id AS observed_item_id, 1 AS compound_level, compoundproperty.text_value AS cat_obs_phenomenon, 'DATA_INTEGRATED_DATABASE_COLUMN' AS type_id, compoundproperty.num_value AS quantity, compoundproperty.date_value AS date_value, compoundproperty.key AS protocol_id FROM compoundproperty WHERE archived = 0",
+        "surrogate_keys": ["type_id", "protocol_id"]
+      },
+      {
+        "query": "SELECT genericentityproperty.generic_entity_id AS observed_item_id, genericentityproperty.text_value AS cat_obs_phenomenon, 'DATA_INTEGRATED_DATABASE_COLUMN' AS type_id, genericentityproperty.num_value AS quantity, genericentityproperty.date_value AS date_value, genericentityproperty.key AS protocol_id FROM genericentityproperty WHERE archived = 0",
+        "surrogate_keys": ["type_id", "protocol_id"]
+      }
+    ],
+    "ld_observations_projects": [
+      {
+        "query": "SELECT lop.lot_observation_id AS observation_id, lop.project_id AS project_id FROM lotobservationproject lop WHERE TRUE"
+      },
+      {
+        "query": "SELECT cop.compound_observation_id AS observation_id, cop.project_id AS project_id FROM compoundobservationproject cop WHERE TRUE"
+      },
+      {
+        "query": "SELECT eop.generic_entity_observation_id AS observation_id, eop.project_id AS project_id FROM genericentityobservationproject eop WHERE TRUE"
+      }
+    ],
+    "syn_document": [
+      {
+        "query": "SELECT COALESCE(key, customer_key, id::TEXT) AS name FROM document WHERE TRUE"
+      }
+    ],
+    "ld_generic_entity": [
+      {
+        "query": "SELECT corporate_id AS corporate_id, person AS registration_scientist_id, file_id AS manageable_file_id FROM genericentity WHERE archived = 0",
+        "surrogate_keys": ["registration_scientist_id"]
+      }
+    ],
+    "ld_data_blob": [
+      {
+        "query": "SELECT f.blob AS data FROM file f WHERE archived = 0"
+      },
+      {
+        "query": "SELECT s.blob AS data FROM structure s WHERE archived = 0"
+      }
+    ],
+    "ld_manageable_file": [
+      {
+        "query": "SELECT key AS file_name, extension AS file_type, person AS registration_scientist_id, project_id AS registration_project_id, id AS data_blob_id FROM file WHERE archived = 0",
+        "surrogate_keys": ["registration_scientist_id"]
+      }
+    ],
+    "ld_structure": [
+      {
+        "query": "SELECT type AS structure_type, format AS file_format, key AS name FROM structure WHERE archived = 0"
+      }
+    ],
+    "ld_structure_data": [
+      {
+        "query": "SELECT id AS structure_id, id AS data_blob_id FROM structure WHERE archived = 0"
+      }
+    ],
+    "ld_pose": [
+      {
+        "query": "SELECT cp.compound_id AS parent_entity_id, cp.project_id AS project_id, cp.person AS person_id FROM pose cp WHERE compound_id IS NOT NULL AND archived = 0",
+        "surrogate_keys": ["person_id"]
+      },
+      {
+        "query": "SELECT ep.generic_entity_id AS parent_entity_id, ep.project_id AS project_id, ep.person AS person_id FROM pose ep WHERE generic_entity_id IS NOT NULL AND archived = 0",
+        "surrogate_keys": ["person_id"]
+      }
+    ]
+  },
+  "target_database": "intermediate_pri"
+}
