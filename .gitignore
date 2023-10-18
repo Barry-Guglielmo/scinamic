@@ -10,3 +10,7 @@ config.py
 *pycache*
 logs/*
 *.db
+di_mapping.json
+*.png
+*.jpg
+*.jpeg
