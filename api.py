@@ -1,5 +1,5 @@
 # this is the general connection to scinamic and an explination of some of the fields
-
+# NOTE: I will remove the get_all_data function and replace with  cycle function like dotmatics
 import requests
 import json
 import base64
@@ -70,23 +70,14 @@ class Audit:
             self.most_recent_audit = self.audits[-1]['pk']
             self.records = [i['record'] for i in self.audits]
             n = 1000 # the size of chunk (1000 is the max)
-            self.chunk_records = [self.records[i * n:(i + 1) * n] for i in range((len(self.records) + n - 1) // n )] 
+            self.chunk_records = [self.records[i * n:(i + 1) * n] for i in range((len(self.records) + n - 1) // n )]
+            # tmp: get first chunk of data to understand the data structure
+            first_chunk = self.session.get_records(self.chunk_records[i]).data
         else:
             self.audits = None
+    def clean_data():
+        print('in progress, clean data')
 
-    def get_all_data(self):
-        """
-        This is broken right now. For some reason I get 'permission denied' if any of the list is permission denied
-            Status:  error
-            Message:  Permission denied.
-            Data:  None
-        """
-        data = []
-        for i in self.chunk_records:
-            chunk = self.session.get_records(i).data
-            data+=chunk
-        self.data = data
-        self.audit_record_pks = [i['pk'] for i in self.data]
 
 class Scinamic_Analysis:
     '''
@@ -97,13 +88,13 @@ class Scinamic_Analysis:
         self.pks = session.search_records("analysis","pks",[""]).data
         n = 1000 # the size of chunk (1000 is the max)
         self.chunk_pks = [self.pks[i * n:(i + 1) * n] for i in range((len(self.pks) + n - 1) // n )]
-        
+
     def get_all_data(self):
         self.data = []
         for i in self.chunk_pks:
             chunk = self.session.get_records(i).data
             self.data+=chunk
-        
+
 class Scinamic_Results:
     '''
     Python class that stores Results data
@@ -115,13 +106,13 @@ class Scinamic_Results:
         self.pks = session.search_records("result","pks",[""]).data
         n = 1000 # the size of chunk (1000 is the max)
         self.chunk_pks = [self.pks[i * n:(i + 1) * n] for i in range((len(self.pks) + n - 1) // n )]
-       
+
     def get_all_data(self):
         self.data = []
         for i in self.chunk_pks:
             chunk = self.session.get_records(i).data
             self.data+=chunk
-        
+
 class Scinamic_CompoundBatches:
     '''
      Python class that returns CompoundBatch Data
@@ -133,13 +124,13 @@ class Scinamic_CompoundBatches:
         self.pks = session.search_records("compoundbatch","pks",[""]).data
         n = 1000 # the size of chunk (1000 is the max)
         self.chunk_pks = [self.pks[i * n:(i + 1) * n] for i in range((len(self.pks) + n - 1) // n )]
-        
+
     def get_all_data(self):
         self.data = []
         for i in self.chunk_pks:
             chunk = self.session.get_records(i).data
             self.data+=chunk
-       
+
 class Scinamic_Projects:
     """
     Python class Returns Projects data
@@ -152,7 +143,6 @@ class Scinamic_Projects:
         n = 1000 # the size of chunk (1000 is the max)
         self.chunk_pks = [self.pks[i * n:(i + 1) * n] for i in range((len(self.pks) + n - 1) // n )]
 
-        
     def get_all_data(self):
         self.data = []
         for i in self.chunk_pks:
@@ -161,7 +151,7 @@ class Scinamic_Projects:
         self.name = {}
         for i in self.data:
             self.name[i['id']]=i
-            
+
 class Scinamic_Studies:
     """
     Python class Returns Studies data
@@ -171,7 +161,7 @@ class Scinamic_Studies:
         self.pks = session.search_records("study","pks",[]).data
         n = 1000 # the size of chunk (1000 is the max)
         self.chunk_pks = [self.pks[i * n:(i + 1) * n] for i in range((len(self.pks) + n - 1) // n )]
-        
+
     def get_all_data(self):
         self.data = []
         for i in self.chunk_pks:
