@@ -29,13 +29,12 @@ def compound_map(scinamic_compounds):
     ss_session is the simpleschema session already opened
 
     Here we will also Map back to the compound project
+    Take in list of compounds (1K at a time)
     '''
     # if compund exists get it from SS and update it
     # get dictionary of scinamic projects to refer to later
-    sci_projects = Scinamic_Projects(scinamic_compounds.session)
-    sci_projects.get_all_data()
 
-    for sci_cmpd in scinamic_compounds.data:
+    for sci_cmpd in scinamic_compounds:
         # update if it exists
         try:
             ld_cmpd = Compound.get(customer_key=sci_cmpd['pk'])
@@ -110,9 +109,10 @@ def assay_map(results):
         a full reload
         '''
         sci_analysis = Scinamic_Analysis(results.session)
-        sci_analysis.get_all_data()
+        # only handles 1K analysis as of now...can improve when needed.
+        # sci_analysis.get_all_data()
         # bring results into simple schema
-        for i in results.data:
+        for i in results:
             try:
                 if i['project']!= 'NONE':
                     compound= Compound.get(corporate_id=i['compound'])
@@ -143,17 +143,32 @@ def assay_map(results):
                         unit = i['timepoint_unit']
                     else:
                         unit = i['value_unit']
-
-                    if 'value_numeric' in i:
-                        co = CompoundObservation.register(compound = compound, 
-                                                            assay = assay, 
-                                                            endpoint = i['value_type'], 
+                    # check if observation already exists
+                    try:
+                        co = CompoundObservation.get(customer_key=i['pk'])
+                        co.compound = compound
+                        co.assay = assay
+                        co.endpoint = i['value_type']
+                        if 'value_numeric' in i:
+                            co.num_value = i['value_numeric']
+                        else:
+                            co.text_value = i['value_text']
+                        co.unit = unit
+                        co.value_operator = value_operator
+                        co.save()
+                    except:
+                        if 'value_numeric' in i:
+                            co = CompoundObservation.register(compound = compound,
+                                                            customer_key = i['pk'],
+                                                            assay = assay,
+                                                            endpoint = i['value_type'],
                                                             num_value = i['value_numeric'],
                                                             unit = unit,
                                                             value_operator = value_operator
                                                             )
-                    else:
-                        co = CompoundObservation.register(compound = compound,
+                        else:
+                            co = CompoundObservation.register(compound = compound,
+                                                            customer_key = ['pk'],
                                                             assay = assay,
                                                             endpoint = i['value_type'],
                                                             text_value = i['value_text'],
@@ -164,37 +179,90 @@ def assay_map(results):
                     if ',' in i['project']:
                         ps = i['project'].split(',')
                         for p in ps + SCINAMIC_PROJECTS_CONFIG['GLOBAL']:
-                            CompoundObservationProject.register(compound_observation=co,
+                            try:
+                                CompoundObservationProject.register(compound_observation=co,
                                         project=Project.get(key=p))
+                            except:
+                                # already registered
+                                x = 0
                     else:
-                        CompoundObservationProject.register(compound_observation=co,
-                                        project=Project.get(key=i['project']))
-                        for i in SCINAMIC_PROJECTS_CONFIG['GLOBAL']:
+                        try:
                             CompoundObservationProject.register(compound_observation=co,
+                                        project=Project.get(key=i['project']))
+                        except:
+                            # already registered
+                            x = 0
+                        for i in SCINAMIC_PROJECTS_CONFIG['GLOBAL']:
+                            try:
+                                CompoundObservationProject.register(compound_observation=co,
                                         project=Project.get(key=i))
-
+                            except:
+                                x = 0
 
                     # Map Curves
                     if 'resultcurve' in i:
                         # this will just add the endpoint we image service will have.
                         # there is a seperate function to load curves because they are SLOW to render
-                        rc = CompoundObservation.register(compound = compound,
+                        try:
+                            rc = CompoundObservation.register(compound = compound,
                                                             assay = assay,
                                                             endpoint = 'ResultCurve',
                                                             text_value ='<img style="width: 100%; height: 100%;" src="{}/livedesign/images/scinamic/curves/{}">'.format(BASE_URL, i['resultcurve'])
                                                             )
                         # handle the project ACLs
-                        if ',' in i['project']:
-                            ps = i['project'].split(',')
-                            for p in ps + SCINAMIC_PROJECTS_CONFIG['GLOBAL']:
-                                CompoundObservationProject.register(compound_observation=rc,
+                            if ',' in i['project']:
+                                ps = i['project'].split(',')
+                                for p in ps + SCINAMIC_PROJECTS_CONFIG['GLOBAL']:
+                                    CompoundObservationProject.register(compound_observation=rc,
                                             project=Project.get(key=p))
-                        else:
-                            CompoundObservationProject.register(compound_observation=rc,
+                            else:
+                                CompoundObservationProject.register(compound_observation=rc,
                                             project=Project.get(key=i['project']))
-                            for i in SCINAMIC_PROJECTS_CONFIG['GLOBAL']:
-                                CompoundObservationProject.register(compound_observation=co,
+                                for i in SCINAMIC_PROJECTS_CONFIG['GLOBAL']:
+                                    CompoundObservationProject.register(compound_observation=co,
                                         project=Project.get(key=i))
-
+                        except:
+                            x = 0
             except:
                 x = 0
+def audit_map(scinamic_audit_class):
+    '''
+    Here we will go through the changes made from last audit key up to now and update the ss record.
+    We will make entity specific decions here. {'GenomicExperiment', 'PlasmidType', 'GenomicSample', 'CompoundBatch'}
+
+    testing from: 
+    '''
+    # Additionally entity type matters, so we can use a dict to make a decision tree easier
+    def record_info_by_entity(my_audit_list, audit_type, batch_size = 1000):
+        d = {}
+        record_pks = [i['record'] for i in scinamic_audit_class.audits if i['type']==audit_type]
+        record_pks = [record_pks[i:i + 1000] for i in range(0, len(record_pks), 1000)]
+        for i in record_pks:
+            # get records in batch of 1K
+            records = scinamic_audit_class.session.get_records(i).data
+            for j in records:
+                if j['entity'] not in d:
+                    d[j['entity']] = [j]
+                else:
+                    d[j['entity']].append(j)
+        return d
+    new = record_info_by_entity(scinamic_audit_class, 'N')
+    update = record_info_by_entity(scinamic_audit_class, 'U')
+    delete = record_info_by_entity(scinamic_audit_class, 'D')
+    # handle compounds
+    if 'Compound' in new:
+        compound_map(new['Compound'])
+    if 'Compound' in update:
+        compound_map(update['Compound'])
+    if 'Compound' in delete:
+        print('In Progress')
+    # handle results
+    if 'Result' in new:
+        assay_map(new['Result'])
+    if 'Result' in update:
+        assay_map(update['Result'])
+    if 'Result' in delete:
+        print('In Progress')
+    # compound batch next
+    return new, update, delete
+

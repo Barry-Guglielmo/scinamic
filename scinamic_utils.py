@@ -1,7 +1,27 @@
 from config import *
 from api import *
 from simpleschema.models import Project, Experiment
+import psycopg2
+from psycopg2 import sql
 
+def get_last_audit():
+    # Database connection parameters
+    connection = psycopg2.connect(**SIMPLE_SCHEMA_DB_CONFIG)
+    cursor = connection.cursor()
+    query = sql.SQL("SELECT audit_id FROM scinamic_audit ORDER BY datetime DESC LIMIT 1")
+    cursor.execute(query)
+    latest_entry = cursor.fetchone()
+    cursor.close()
+    connection.close()
+    return latest_entry[0]
+def update_last_audit(most_recent_audit):
+    # Database connection parameters
+    connection = psycopg2.connect(**SIMPLE_SCHEMA_DB_CONFIG)
+    cursor = connection.cursor()
+    query = sql.SQL("INSERT INTO scinamic_audit (audit_id) VALUES (%i)"%most_recent_audit)
+    cursor.execute(query)
+    cursor.close()
+    connection.close()
 def add_projects_to_ss():
     # customer_key = scinamic_project_pk, 
     # key = ld_project_name

@@ -36,12 +36,11 @@ class Scinamic_Compounds:
     Example usage:
 
     >>> s = Scinamic_Session(SCINAMIC_API_CONFIG)
-    >>> compounds = Scinamic_Compounds(s)
-    >>> compounds.get_all_data()
+    >>> compounds = Scinamic_Compounds(s) # Returns first 1K
     >>> compounds.data[0] # first compund info as dict
-
+    >>> compounds.cycle() # get next 1K compounds
     '''
-    def __init__(self, session):
+    def __init__(self, session, offset = 0):
         # we may need multiple calls, but lets start simple
         self.session = session
         self.pks = session.search_records("compound","pks",["mw > 0"]).data
@@ -50,78 +49,72 @@ class Scinamic_Compounds:
         n = 1000 # the size of chunk (1000 is the max)
         self.chunk_ids = [self.ids[i * n:(i + 1) * n] for i in range((len(self.ids) + n - 1) // n )]
         self.chunk_pks = [self.pks[i * n:(i + 1) * n] for i in range((len(self.pks) + n - 1) // n )]
+        self.offset = offset
+        self.data = self.session.get_records(self.chunk_pks[self.offset]).data
 
-
-    def get_all_data(self):
-        data = []
-        for i in self.chunk_pks:
-            chunk = self.session.get_records(i).data
-            data+=chunk
-        self.data = data
+    def cycle(self):
+        self.offset += 1
+        self.data = self.session.get_records(self.chunk_pks[self.offset]).data
 
 class Audit:
     """
-    TODO: Fill in
+    This will pick up the audit trail for Scinamic. If None it currently only returns first 1M results.
+
+    This will typically only be a few calls to get to endo of groups that have been using scinamic for years.
+    We will use the 'entity' field to decide what to do with each of these audits in mapping steps.
+
+    Types 'N' for new, 'U' for update, and 'D' for deleted
     """
     def __init__(self, session, min_audit_pk = None):
         self.session = session
         if min_audit_pk != None:
+            # A single audit call will not capture everything
             self.audits = session.get_audits(min_audit_pk=min_audit_pk).data
             self.most_recent_audit = self.audits[-1]['pk']
             self.records = [i['record'] for i in self.audits]
             n = 1000 # the size of chunk (1000 is the max)
-            self.chunk_records = [self.records[i * n:(i + 1) * n] for i in range((len(self.records) + n - 1) // n )] 
+            self.chunk_records = [self.records[i * n:(i + 1) * n] for i in range((len(self.records) + n - 1) // n )]
         else:
-            self.audits = None
-
-    def get_all_data(self):
-        """
-        This is broken right now. For some reason I get 'permission denied' if any of the list is permission denied
-            Status:  error
-            Message:  Permission denied.
-            Data:  None
-        """
-        data = []
-        for i in self.chunk_records:
-            chunk = self.session.get_records(i).data
-            data+=chunk
-        self.data = data
-        self.audit_record_pks = [i['pk'] for i in self.data]
+            # get first 1M audits, will update to get all and most recent later
+            self.audits = session.get_audits().data # record, pk, time, type, user
+            self.most_recent_audit = self.audits[-1]['pk']
+            self.most_recent_audit_data = self.audits[-1]
+            self.records = [i['record'] for i in self.audits]
+            n = 1000 # the size of chunk (1000 is the max)
+            self.chunk_records = [self.records[i * n:(i + 1) * n] for i in range((len(self.records) + n - 1) // n )]
 
 class Scinamic_Analysis:
     '''
     Python class that stores Analysis Data
     '''
-    def __init__(self, session):
+    def __init__(self, session, offset=0):
         self.session = session
         self.pks = session.search_records("analysis","pks",[""]).data
         n = 1000 # the size of chunk (1000 is the max)
         self.chunk_pks = [self.pks[i * n:(i + 1) * n] for i in range((len(self.pks) + n - 1) // n )]
-        
-    def get_all_data(self):
-        self.data = []
-        for i in self.chunk_pks:
-            chunk = self.session.get_records(i).data
-            self.data+=chunk
-        
+        self.offset = offset
+        self.data = self.session.get_records(self.chunk_pks[0]).data
+    def cycle(self):
+        self.offset += 1
+        self.data = self.session.get_records(self.chunk_pks[self.offset]).data
+
 class Scinamic_Results:
     '''
-    Python class that stores Results data
+    Python class that stores Results data in batches of 1K. This is mostly used for Full Reloads.
     '''
-    def __init__(self, session):
+    def __init__(self, session, offset = 0):
         # we may need multiple calls, but lets start simple
         self.session = session
         # Results PK
         self.pks = session.search_records("result","pks",[""]).data
         n = 1000 # the size of chunk (1000 is the max)
         self.chunk_pks = [self.pks[i * n:(i + 1) * n] for i in range((len(self.pks) + n - 1) // n )]
-       
-    def get_all_data(self):
-        self.data = []
-        for i in self.chunk_pks:
-            chunk = self.session.get_records(i).data
-            self.data+=chunk
-        
+        self.offset = offset
+        self.data = self.session.get_records(self.chunk_pks[0]).data
+    def cycle(self):
+        self.offset += 1
+        self.data = self.session.get_records(self.chunk_pks[self.offset]).data
+
 class Scinamic_CompoundBatches:
     '''
      Python class that returns CompoundBatch Data

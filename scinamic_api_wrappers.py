@@ -39,7 +39,7 @@ class Session:
 		if not r.status == 'ok':
 			r.show()
 		return r
-        
+
 	def login(self):
 		r = self.post('login',{'user':self.user,'password':self.password})
 		self.auth_token = r.data
@@ -54,7 +54,7 @@ class Session:
 			'field_filter':field_filter,
 			}
 		return self.post('search_records',params);
-    
+
 	def get_audits(self, record_pk=None, entity_id=None,entity_pk=None,min_audit_pk=None,fields=None):
 		params = {'auth_token':self.auth_token,
 			'record_pk':record_pk,
