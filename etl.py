@@ -10,6 +10,9 @@ from api import *
 from config import *
 from map import *
 from scinamic_utils import *
+from simpleschema.models import *
+
+SimpleSchema_Session(SIMPLE_SCHEMA_DB_CONFIG)
 
 def create_cursor(SIMPLE_SCHEMA_DB_CONFIG):
     '''
@@ -46,9 +49,9 @@ def etl(sci_session, ss_session, cursor, etl_run_type = 'audit'):
     Run the ETL pipeline on appropriate data points (All or Updated)
     '''
 
-    print("Starting the Scinamic to LiveDesign ETL")
+    logger.info("Starting the Scinamic to LiveDesign ETL")
     #ld_last_audit = ld_last_audit_record(cursor)
-    print("ETL Run Type:" + etl_run_type)
+    logger.info("ETL Run Type:" + etl_run_type)
 
     if etl_run_type == 'full_reload':
         # get most recent audit pk
@@ -88,6 +91,14 @@ def etl(sci_session, ss_session, cursor, etl_run_type = 'audit'):
         curves.render_all_to_db()
     elif etl_run_type == 'incremental':
         audits = Audit(sci_session, get_last_audit())
-        print("starting at hash record %s"%audits.most_recent_audit)
+        logger.info("Starting at hash record %s", audits.most_recent_audit)
+        starting_compounds = Compound.select().count()
+        starting_compoundobservations = CompoundObservation.select().count()
         audit_map(audits)
         update_last_audit(audits.most_recent_audit)
+        SimpleSchema_Session(SIMPLE_SCHEMA_DB_CONFIG)
+        ending_compounds = Compound.select().count()
+        ending_compoundobservations = CompoundObservation.select().count()
+        logger.info('\nStarting Number of Compounds = %i\nEnding Number of Compounds: %i\nNet Compounds: %i',starting_compounds,ending_compounds,ending_compounds-starting_compounds)
+        logger.info('\nStarting Number of Observations = %i\nEnding Number of Observations: %i\nNet Observations: %i',starting_compoundobservations,ending_compoundobservations,ending_compoundobservations-starting_compoundobservations)
+

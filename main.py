@@ -54,4 +54,5 @@ if __name__ == '__main__':
     # Close Scinamic Session
     # ss_session.logout()
     sci_session.logout()
-
+    # Ended not = Success
+    logger.info('Scinamic ETL Scripts Ended...')

@@ -264,5 +264,9 @@ def audit_map(scinamic_audit_class):
     if 'Result' in delete:
         print('In Progress')
     # compound batch next
-    return new, update, delete
-
+    logger.info('Dictionaries below are just the info from API calls, not the actual changes made to SS...')
+    logger.info('New Entries Dictionary: %s', str(new))
+    logger.info('Updated Entries Dictionary: %s', str(update))
+    logger.info('Deleted Dictionary: %s', str(delete))
+    if 'Compound' in new:
+        logger.info('Expected New Compounds: %i',new['Compound'])
