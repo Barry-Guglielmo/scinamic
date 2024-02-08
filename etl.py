@@ -9,7 +9,7 @@ import psycopg2
 from api import *
 from config import *
 from map import *
-
+from scinamic_utils import *
 
 def create_cursor(SIMPLE_SCHEMA_DB_CONFIG):
     '''
@@ -55,23 +55,25 @@ def etl(sci_session, ss_session, cursor, etl_run_type = 'audit'):
         audits = Audit(sci_session)
         n = 0
         # we may have to pageniate
+        print(len(audits.audits))
         if len(audits.audits) == 1000000:
             while len(audits.audits) == 1000000:
                 audits = Audit(sci_session, audits.most_recent_audit)
+        print(audits.most_recent_audit)
         update_last_audit(audits.most_recent_audit)
         # put in nuking the db
         compounds = Scinamic_Compounds(sci_session)
         # map compounds to projects and make projects if needed
         compound_map(compounds.data)
         if len(compounds.chunk_pks) > 1:
-            for i in range(0,len(compounds.chunk_pks)):
+            for i in range(0,len(compounds.chunk_pks)-1):
                 compounds.cycle()
                 compound_map(compounds.data)
         # map assay data
         results = Scinamic_Results(sci_session)
         assay_map(results.data)
         if len(results.chunk_pks) > 1:
-            for i in range(0,len(results.chunk_pks)):
+            for i in range(0,len(results.chunk_pks)-1):
                 results.cycle()
                 assay_map(results.data)
         # curves -- need to add in decision here
@@ -84,8 +86,8 @@ def etl(sci_session, ss_session, cursor, etl_run_type = 'audit'):
     elif etl_run_type == 'curves_only':
         curves = Scinamic_Curves(sci_session)
         curves.render_all_to_db()
-    elif etl_run_type == 'audit':
+    elif etl_run_type == 'incremental':
         audits = Audit(sci_session, get_last_audit())
+        print("starting at hash record %s"%audits.most_recent_audit)
         audit_map(audits)
         update_last_audit(audits.most_recent_audit)
-        print("starting at hash record %s"%ld_last_audit)

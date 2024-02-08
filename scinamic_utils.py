@@ -18,10 +18,12 @@ def update_last_audit(most_recent_audit):
     # Database connection parameters
     connection = psycopg2.connect(**SIMPLE_SCHEMA_DB_CONFIG)
     cursor = connection.cursor()
-    query = sql.SQL("INSERT INTO scinamic_audit (audit_id) VALUES (%i)"%most_recent_audit)
-    cursor.execute(query)
+    query = "INSERT INTO scinamic_audit (audit_id) VALUES (%s)"
+    cursor.execute(query, (most_recent_audit,))
+    connection.commit()
     cursor.close()
     connection.close()
+
 def add_projects_to_ss():
     # customer_key = scinamic_project_pk, 
     # key = ld_project_name

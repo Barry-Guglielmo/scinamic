@@ -14,7 +14,7 @@ parser.add_argument('-f', '--full_reload',action='store_true', required=False)  
 parser.add_argument('-d', '--delete_data',action='store_true', required=False)      # Delete data in SimpleSchema Scinamic DB
 parser.add_argument('-a', '--assay_only',action='store_true', required=False)      # Delete data in SimpleSchema Scinamic DB
 parser.add_argument('-c', '--curves_only',action='store_true', required=False)      # Delete data in SimpleSchema Scinamic DB
-
+parser.add_argument('-i', '--incremental',action='store_true', required=False)
 args = parser.parse_args()
 
 
@@ -38,10 +38,12 @@ if __name__ == '__main__':
     # Full Reload if arg is set
     if args.full_reload == True:
         etl(sci_session, ss_session, cursor, etl_run_type='full_reload')
-    if args.assay_only == True:
+    elif args.assay_only == True:
         etl(sci_session, ss_session, cursor, etl_run_type='assay_only')
     elif args.curves_only == True:
         etl(sci_session, ss_session, cursor, etl_run_type='curves_only')
+    elif args.incremental == True:
+        etl(sci_session, ss_session, cursor, etl_run_type='incremental')
     else:
         # Note: Full reload will occur if there isn't an Audit > 0 in the scinamic_audit table in SimpleSchema
         etl(sci_session, ss_session, cursor)

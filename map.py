@@ -108,7 +108,7 @@ def assay_map(results):
         assumes all results are "new" or need to be added, be sure to delete the compound observations table if doing
         a full reload
         '''
-        sci_analysis = Scinamic_Analysis(results.session)
+        # sci_analysis = Scinamic_Analysis(results.session)
         # only handles 1K analysis as of now...can improve when needed.
         # sci_analysis.get_all_data()
         # bring results into simple schema
