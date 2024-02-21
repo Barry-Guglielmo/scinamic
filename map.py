@@ -48,6 +48,7 @@ def compound_map(scinamic_compounds):
             ld_cmpd.person = sci_cmpd['creation_user']
             ld_cmpd.archived = not sci_cmpd['active']
             ld_cmpd.save()
+            go = True
         except:
             # create new ones if needed
             try:
@@ -113,10 +114,11 @@ def assay_map(results):
         # sci_analysis.get_all_data()
         # bring results into simple schema
         for i in results:
+            logger.info(i)
             try:
                 if i['project']!= 'NONE':
                     compound= Compound.get(corporate_id=i['compound'])
-
+                    logger.info('compound found')
                     # register assay if it does not already exist (Note this is where pivoting happens)
                     if i["study"] in PIVOT_CONDITIONS:
                         # pivot = True
@@ -137,7 +139,7 @@ def assay_map(results):
                     if 'value_operator' in i:
                         value_operator = i['value_operator']
                     else:
-                        value_operator = ''
+                        value_operator = None
                     # handle the timepoint unit
                     if 'timepoint_unit' in i:
                         unit = i['timepoint_unit']
@@ -145,12 +147,14 @@ def assay_map(results):
                         unit = i['value_unit']
                     # check if observation already exists
                     try:
+                        logger.info('Try to Find CO')
                         co = CompoundObservation.get(customer_key=i['pk'])
+                        logger.info('CO found')
                         co.compound = compound
                         co.assay = assay
                         co.endpoint = i['value_type']
                         if 'value_numeric' in i:
-                            co.num_value = i['value_numeric']
+                            co.num_value = float(i['value_numeric'])
                         else:
                             co.text_value = i['value_text']
                         co.unit = unit
@@ -162,7 +166,7 @@ def assay_map(results):
                                                             customer_key = i['pk'],
                                                             assay = assay,
                                                             endpoint = i['value_type'],
-                                                            num_value = i['value_numeric'],
+                                                            num_value = float(i['value_numeric']),
                                                             unit = unit,
                                                             value_operator = value_operator
                                                             )
@@ -184,20 +188,20 @@ def assay_map(results):
                                         project=Project.get(key=p))
                             except:
                                 # already registered
-                                x = 0
+                                logger.info('CompoundObservation for %s already in project %s', i['compound'],i['project'])
                     else:
                         try:
                             CompoundObservationProject.register(compound_observation=co,
                                         project=Project.get(key=i['project']))
                         except:
                             # already registered
-                            x = 0
+                            logger.info('CompoundObservation for %s already in project %s', i['compound'],i['project'])
                         for i in SCINAMIC_PROJECTS_CONFIG['GLOBAL']:
                             try:
                                 CompoundObservationProject.register(compound_observation=co,
                                         project=Project.get(key=i))
                             except:
-                                x = 0
+                                logger.info('Already in global observation project: %s',i['compound'])
 
                     # Map Curves
                     if 'resultcurve' in i:
@@ -222,9 +226,9 @@ def assay_map(results):
                                     CompoundObservationProject.register(compound_observation=co,
                                         project=Project.get(key=i))
                         except:
-                            x = 0
+                            logger.error('Result Curve Error for: ',str(i))
             except:
-                x = 0
+                logger.error('Did not pass first Result try/except %i',str(i))
 def audit_map(scinamic_audit_class):
     '''
     Here we will go through the changes made from last audit key up to now and update the ss record.
@@ -249,24 +253,25 @@ def audit_map(scinamic_audit_class):
     new = record_info_by_entity(scinamic_audit_class, 'N')
     update = record_info_by_entity(scinamic_audit_class, 'U')
     delete = record_info_by_entity(scinamic_audit_class, 'D')
-    # handle compounds
+    # handle compounds test (new and update compound checked out)
     if 'Compound' in new:
         compound_map(new['Compound'])
     if 'Compound' in update:
         compound_map(update['Compound'])
     if 'Compound' in delete:
-        print('In Progress')
-    # handle results
+        logger.error('Deletion Function for Compounds In Progress')
+
+    # handle results (new and update checked out)
     if 'Result' in new:
         assay_map(new['Result'])
     if 'Result' in update:
         assay_map(update['Result'])
     if 'Result' in delete:
-        print('In Progress')
+        logger.error('Deletion Function for Results In Progress')
     # compound batch next
     logger.info('Dictionaries below are just the info from API calls, not the actual changes made to SS...')
     logger.info('New Entries Dictionary: %s', str(new))
     logger.info('Updated Entries Dictionary: %s', str(update))
     logger.info('Deleted Dictionary: %s', str(delete))
     if 'Compound' in new:
-        logger.info('Expected New Compounds: %i',new['Compound'])
+        logger.info('Expected New Compounds: %i',str(new['Compound']))

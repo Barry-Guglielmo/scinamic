@@ -99,6 +99,6 @@ def etl(sci_session, ss_session, cursor, etl_run_type = 'audit'):
         SimpleSchema_Session(SIMPLE_SCHEMA_DB_CONFIG)
         ending_compounds = Compound.select().count()
         ending_compoundobservations = CompoundObservation.select().count()
-        logger.info('\nStarting Number of Compounds = %i\nEnding Number of Compounds: %i\nNet Compounds: %i',starting_compounds,ending_compounds,ending_compounds-starting_compounds)
-        logger.info('\nStarting Number of Observations = %i\nEnding Number of Observations: %i\nNet Observations: %i',starting_compoundobservations,ending_compoundobservations,ending_compoundobservations-starting_compoundobservations)
+        logger.info('\n**Starting Number of Compounds: %i\n**Ending Number of Compounds: %i\n**Net Compounds: %i',starting_compounds,ending_compounds,ending_compounds-starting_compounds)
+        logger.info('\n**Starting Number of Observations: %i\n**Ending Number of Observations: %i\n**Net Observations: %i',starting_compoundobservations,ending_compoundobservations,ending_compoundobservations-starting_compoundobservations)
 
