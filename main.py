@@ -10,11 +10,13 @@ parser = argparse.ArgumentParser(
                     description='ETL From Scinamic to LD',
                     epilog='Please See README for more details. See Confluence for SA usage.')
 
-parser.add_argument('-f', '--full_reload',action='store_true', required=False)      # Do a full reload of the data to simple schema
-parser.add_argument('-d', '--delete_data',action='store_true', required=False)      # Delete data in SimpleSchema Scinamic DB
-parser.add_argument('-a', '--assay_only',action='store_true', required=False)      # Delete data in SimpleSchema Scinamic DB
-parser.add_argument('-c', '--curves_only',action='store_true', required=False)      # Delete data in SimpleSchema Scinamic DB
-parser.add_argument('-i', '--incremental',action='store_true', required=False)
+parser.add_argument('-f', '--full_reload',action='store_true', required=False)          # Do a full reload of the data to simple schema
+parser.add_argument('-d', '--delete_data',action='store_true', required=False)          # Delete data in SimpleSchema Scinamic DB
+parser.add_argument('-a', '--assays_only',action='store_true', required=False)          # Load in all assay data only
+parser.add_argument('-c', '--curves_only',action='store_true', required=False)          # curves only (curves are heavy)
+parser.add_argument('-i', '--incremental_load',action='store_true', required=False)     # incremental loading (set after initial load is complete)
+parser.add_argument('-cmpd', '--compounds_only',action='store_true', required=False)    # compounds only
+
 args = parser.parse_args()
 
 
@@ -38,16 +40,17 @@ if __name__ == '__main__':
     # Full Reload if arg is set
     if args.full_reload == True:
         etl(sci_session, ss_session, cursor, etl_run_type='full_reload')
-    elif args.assay_only == True:
+    elif args.compounds_only == True:
+        etl(sci_session, ss_session, cursor, etl_run_type='compounds_only') 
+    elif args.assays_only == True:
         etl(sci_session, ss_session, cursor, etl_run_type='assay_only')
     elif args.curves_only == True:
         etl(sci_session, ss_session, cursor, etl_run_type='curves_only')
-    elif args.incremental == True:
+    elif args.incremental_load == True:
         etl(sci_session, ss_session, cursor, etl_run_type='incremental')
     else:
         # Note: Full reload will occur if there isn't an Audit > 0 in the scinamic_audit table in SimpleSchema
-        etl(sci_session, ss_session, cursor)
-
+        logger.error('No Valid ETL Run Type Entered...')
     # Close SimpleSchema Session
     conn.close()
 

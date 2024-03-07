@@ -1,6 +1,6 @@
 #!/bin/bash
-source ../venv/bin/activate
-python ../main.py -d -f
-di_main -s /vol/bluebird/seurat/LiveDesign/DataIntegrator/scinamic_di_settings_di_formatted.json
-echo $(date) &>>scinamic.log
-sleep 1800
+cd /vol/bluebird/seurat/pro_serv/scinamic_integration
+echo "Today's date is: $(date +'%Y-%m-%d')" | tee -a test.txt
+source /vol/bluebird/seurat/pro_serv/scinamic_integration/venv/bin/activate
+echo  'source' | tee -a test.txt
+python /vol/bluebird/seurat/pro_serv/scinamic_integration/main.py -i

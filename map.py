@@ -33,7 +33,11 @@ def compound_map(scinamic_compounds):
     '''
     # if compund exists get it from SS and update it
     # get dictionary of scinamic projects to refer to later
-
+    logger.info('logging next batch of %s compounds'%len(scinamic_compounds))
+    # get the sci projects for mapping
+    s = Scinamic_Session(SCINAMIC_API_CONFIG)
+    sci_projects = Scinamic_Projects(s)
+    sci_projects.get_all_data()
     for sci_cmpd in scinamic_compounds:
         # update if it exists
         try:
@@ -43,7 +47,7 @@ def compound_map(scinamic_compounds):
             try:
                 ld_cmpd.mol_file = Chem.MolToMolBlock(Chem.MolFromSmiles(ld_cmpd.canonical_smiles))
             except:
-                print("error creating molfile loading")
+                logger.error("error creating molfile")
             ld_cmpd.created_at = sci_cmpd['creation_date']
             ld_cmpd.person = sci_cmpd['creation_user']
             ld_cmpd.archived = not sci_cmpd['active']
@@ -68,20 +72,16 @@ def compound_map(scinamic_compounds):
                 ld_cmpd = Compound.get(customer_key=sci_cmpd['pk'])
                 go = True
             except:
-                print('error processing:\n'+str(sci_cmpd)+'\n')
-        # Check that project exists in SS
-        # ld_projects = Project.select().execute()
-        # ld_project_names = [p.__dict__['__data__']['key'] for p in ld_projects]
-        # Breaks if project None
+                logger.error('error processing:\n'+str(sci_cmpd)+'\n')
+        # ACL to projects (breaks if project = None)
         if 'projects' in sci_cmpd and go == True:
             sci_cmpd['projects'] =[i.strip() for i in sci_cmpd['projects'].split(',')]
             for p in sci_cmpd['projects']:
-                # get the scinamic projects key 
-
+                # get the scinamic projects key
                 try:
                     sci_proj_key = int(sci_projects.name[p]['pk'])
                 except:
-                    x = 0
+                    logger.error('No sci_projects for %s'%str(p))
                 # look it up in our Config table
                 try:
                     ld_proj_names = SCINAMIC_PROJECTS_CONFIG[sci_proj_key]
@@ -113,12 +113,11 @@ def assay_map(results):
         # only handles 1K analysis as of now...can improve when needed.
         # sci_analysis.get_all_data()
         # bring results into simple schema
+        logger.info('logging next batch of %s results'%len(results))
         for i in results:
-            logger.info(i)
             try:
                 if i['project']!= 'NONE':
                     compound= Compound.get(corporate_id=i['compound'])
-                    logger.info('compound found')
                     # register assay if it does not already exist (Note this is where pivoting happens)
                     if i["study"] in PIVOT_CONDITIONS:
                         # pivot = True
@@ -143,13 +142,13 @@ def assay_map(results):
                     # handle the timepoint unit
                     if 'timepoint_unit' in i:
                         unit = i['timepoint_unit']
-                    else:
+                    if 'value_unit' in i:
                         unit = i['value_unit']
+                    else:
+                        unit = None
                     # check if observation already exists
                     try:
-                        logger.info('Try to Find CO')
                         co = CompoundObservation.get(customer_key=i['pk'])
-                        logger.info('CO found')
                         co.compound = compound
                         co.assay = assay
                         co.endpoint = i['value_type']
@@ -187,15 +186,15 @@ def assay_map(results):
                                 CompoundObservationProject.register(compound_observation=co,
                                         project=Project.get(key=p))
                             except:
-                                # already registered
-                                logger.info('CompoundObservation for %s already in project %s', i['compound'],i['project'])
+                                # already registered (or project not in config)
+                                logger.info('CompoundObservation for %s already in project %s or project not in config.py', i['compound'],i['project'])
                     else:
                         try:
                             CompoundObservationProject.register(compound_observation=co,
                                         project=Project.get(key=i['project']))
                         except:
-                            # already registered
-                            logger.info('CompoundObservation for %s already in project %s', i['compound'],i['project'])
+                            # already registered (or project not in config)
+                            logger.info('CompoundObservation for %s already in project %s or project not in config.py', i['compound'],i['project'])
                         for i in SCINAMIC_PROJECTS_CONFIG['GLOBAL']:
                             try:
                                 CompoundObservationProject.register(compound_observation=co,
@@ -228,7 +227,7 @@ def assay_map(results):
                         except:
                             logger.error('Result Curve Error for: ',str(i))
             except:
-                logger.error('Did not pass first Result try/except %i',str(i))
+                logger.error('Did not pass first Result try/except loop:\n%s',str(i))
 def audit_map(scinamic_audit_class):
     '''
     Here we will go through the changes made from last audit key up to now and update the ss record.
@@ -255,16 +254,20 @@ def audit_map(scinamic_audit_class):
     delete = record_info_by_entity(scinamic_audit_class, 'D')
     # handle compounds test (new and update compound checked out)
     if 'Compound' in new:
+        logger.info('New compounds detected: %s'%str(new['Compound']))
         compound_map(new['Compound'])
     if 'Compound' in update:
+        logger.info('Updated compounds detected: %s'%str(update['Compound']))
         compound_map(update['Compound'])
     if 'Compound' in delete:
         logger.error('Deletion Function for Compounds In Progress')
 
     # handle results (new and update checked out)
     if 'Result' in new:
+        logger.info('New compounds detected: %s'%str(new['Result']))
         assay_map(new['Result'])
     if 'Result' in update:
+        logger.info('New compounds detected: %s'%str(new['Result']))
         assay_map(update['Result'])
     if 'Result' in delete:
         logger.error('Deletion Function for Results In Progress')
