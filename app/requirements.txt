@@ -1,0 +1,5 @@
+livedesign-simpleschema-1.2.0.tar.gz
+requests
+psycopg2
+pillow
+rdkit
