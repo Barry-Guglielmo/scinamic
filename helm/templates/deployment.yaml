@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cdd-integration
+  labels:
+    app.kubernetes.io/name: cdd-integration
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cdd-integration
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: cdd-integration
+      labels:
+        app.kubernetes.io/name: cdd-integration
+        egress: internet
+    spec:
+      containers:
+      {{- include "helpers.cloud-sql-proxy" $ | indent 8 }}
+        - name: cdd-integration
+          image: "{{ $.Values.global.registry }}/{{ $.Values.global.gcp_project }}/{{ .Values.global.project }}/cdd-integration:{{ $.Values.global.build }}"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "16Gi" # May require more depending on data load
+              cpu: "2000m"
+          ports:
+            - containerPort: 9100
+          env:
+            - name: LIVEDESIGN_URL
+              value: "http://livedesign-jetty:8080"
+            - name: CDD_VAULT_API_TOKEN
+              value: {{ .Values.global.livedesign_integrations.cdd_integration.cdd_vault_api_token }} # TODO: should be a secret
+            - name: KUBERNETES
+              value: "true"
+            - name: IS_ENABLED
+              value: "false" # Set to "true" to have cdd_run be running continuously
+            - name: RUN_FREQUENCY_SECONDS
+              value: "600" # Modify this value to change frequency of cdd_run
+            - name: DATABASE
+              value: "postgresql://cdd:{{ .Values.global.cloudsql.cloudsql_cdd_cdd_password }}@{{ .Values.global.db_host }}:{{ .Values.global.db_port }}/cdd"
+            - name: SYNAPTIC_SEURAT_PWD
+              value: {{ .Values.global.cloudsql.cloudsql_synaptic_seurat_password | quote }}
+            - name: SYNAPTIC_SEURAT_PORT
+              value: {{ .Values.global.db_port | quote }}
+            - name: SYNAPTIC_SEURAT_HOST
+              value: {{ .Values.global.db_host | quote }}
+            - name: DOMAIN_NAME
+              value: {{ .Values.global.hostname }}
+            - name: SMTP_AUTH
+              value: {{ .Values.global.smtp.auth | quote }}
+            - name: SMTP_FROM_ADDRESS
+              value: {{ .Values.global.smtp.from_address }}
+            - name: SMTP_HOST
+              value: {{ .Values.global.smtp.host }}
+            - name: SMTP_PASSWORD
+              value: {{ .Values.global.smtp.password }} # TODO: How to handle when we do not set SMTP PWD
+            - name: SMTP_PORT
+              value: {{ .Values.global.smtp.port | quote }}
+            - name: SMTP_STARTTLS_ENABLE
+              value: {{ .Values.global.smtp.starttls_enable | quote }}
+            - name: SMTP_USER
+              value: {{ .Values.global.smtp.username }}
+          volumeMounts:
+            - name: cdd-integration-data-store
+              mountPath: /app/persistence
+            - name: cdd-integration-configmap-config-py
+              mountPath: /app/cdd/config.py
+              subPath: config.py
+      securityContext:
+          fsGroup: 1000
+      volumes:
+        - name: cdd-integration-data-store
+          persistentVolumeClaim:
+            claimName: cdd-integration-data-store-pvc
+        - name: cdd-integration-configmap-config-py
+          configMap:
+            name: cdd-integration

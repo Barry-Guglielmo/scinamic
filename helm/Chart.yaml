@@ -1,0 +1,5 @@
+apiVersion: v2
+appVersion: "1.0"
+name: cdd-integration
+version: 0.1.0
+description: Helm chart for the CDD Integration with LiveDesign

@@ -1,0 +1,15 @@
+# This is a YAML-formatted file.
+
+# global.hostname = LIVEDESIGN_URL. Host on which data integration connects to LDClient.
+# Leave empty for development. The value of global.hostname set in LiveDesign's
+# values.yaml or overrides.yaml takes precedence over value set here.
+
+global:
+  hostname: ""
+  registry: gcr.io
+  gcp_project: livedesign-development-31333
+
+data_store_storage: 1Gi
+integration:
+  name: cdd-integration
+  endpoint: "/cdd"

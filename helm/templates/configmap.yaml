@@ -1,0 +1,291 @@
+{{- if not .Values.global.livedesign_integrations.cdd_integration.custom_configmap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cdd-integration
+data: # Below is default config.py file at https://github.com/schrodinger/livedesign-integrations/blob/main/cdd/cdd/config.py
+  config.py: |
+    """
+    Globals Configurations
+    """
+    # Enabled Vault(s): At least 1 vault is required. Multi-vault support was added by PROSERV-4027.
+    # To setup config.py for more than one vault:
+    # 1) Add additional vault ids to CONFIG_VAULTS
+    # 2) Add additional JSON block to CMPD_PROJECT_MAP, PROT_PROJECT_MAP, and PROT_MAP
+    #    with the vault_id as key (see example in the commented out PROT_PROJECT_MAP below).
+    # All other configs remain unchanged and apply to all vaults.
+    # Different vaults are expected to have distinct projects.
+    CONFIG_VAULTS = [9999]  # cdd_id from api.vaults()
+    # For multiple vaults this would be like [9999,8888,...]
+
+    # ETL Projects
+    #  * Project ID: Project Name key value pairs
+    #  * Project Names should match LD syn_projects
+    #  * Project IDs are used throughout this config file to refer to LD target project
+    #  NOTE: Any changes to ETL_PROJECTS will require running `cdd_admin update_projects`
+    ETL_PROJECTS = {
+        1: "LD PROJECT 1",
+        2: "LD PROJECT 2",
+        3: "ETC"
+    }
+
+
+    # Project Mappings per vault : cdd project id --> simplereg ETL project.id
+    #                              cdd project id --> list of simplereg ETL project.ids
+    # Note for backwards compatibility we support bare int or list of ints.
+    # To map one CDD project to many LD projects use list format shown below.
+    # Only mapped projects from CDD will be ETLed.
+    CMPD_PROJECT_MAP = {
+        9999: {              # <-- replace with vault_id
+            1234: 1,      # <-- replace with cdd_id1: project.id1,
+            1234: [2],    # <-- reaplce with cdd_id2: [project.id2]
+            4325: [1,2] # <-- replace with cdd_id2: [list of ids],
+            }
+        }
+
+    PROT_PROJECT_MAP = CMPD_PROJECT_MAP  # For most cases
+    # To support different project mapping for protocols.
+    # PROT_PROJECT_MAP = {
+    #     9999: {           # <-- replace with vault_id
+    #         2345: 1,   # <-- replace with cdd_id1: project.id1,
+    #         5432: [1]  # <-- replace with cdd_id2: project.id2,
+    #         },
+    #     8888: {           # Example of how to extend mappings for an additional vault
+    #         4567: 1,   # <-- replace with cdd_id3: project.id3,
+    #         7654: [1,2] # <-- replace with cdd_id4: project.id4,
+    #         }
+    # }
+
+    # (Non-standard) Set CMPD_PROJECT_MAP_BY_BATCH_FIELD to the name of the batch field that contains values that map to LD projects.
+    # Setting CMPD_PROJECT_MAP_BY_BATCH_FIELD != None bypasses CMPD_PROJECT_MAP (we ignore regular cdd projects on molecules)
+    # and forces all compound projects to be derived from the batch level field set here.
+    # The values from the batch field when run through CMPD_PROJECT_MAP_BY_BATCH_FIELD_MAP must exactly match the names defined in ETL_PROJECTS or they will be skipped.
+    # Set to None for most deployments.
+    CMPD_PROJECT_MAP_BY_BATCH_FIELD = None
+    CMPD_PROJECT_MAP_BY_BATCH_FIELD_MAP = None # or uncomment mapping {
+    #    'Batch Field Value X': 'LD PROJECT 1',
+    #    'Batch Field Value Y': 'LD PROJECT 1',
+    #    'Batch Field Value Z': 'LD PROJECT 2'
+    #}
+
+    # (Non-standard) Set PROT_PROJECT_MAP_BY_PROTOCOL_CONDITION to the name of the protocol endpoint that contains values that map to LD projects.
+    # Setting PROT_PROJECT_MAP_BY_PROTOCOL_CONDITION != None disables normal handling of protocol projects (i.e. ignore the projects set on the
+    # protocol itself and instead defer to the project mappings set by the protocol endpoint data itself.
+    # The values from the endpoint, when run through PROT_PROJECT_MAP_BY_PROTOCOL_CONDITION_MAP must exactly match the names defined in ETL_PROJECTS or else related data row will be skipped.
+    # Protocols that do not have this named endpoint will be handled normally i.e. CMPD_PROJECT (or PROT_PROJECT_MAP if set separately) will be
+    # used to map protocol cdd projects to LD projects.
+    # Set to None for most deployments.
+    PROT_PROJECT_MAP_BY_PROTOCOL_CONDITION = None
+    PROT_PROJECT_MAP_BY_PROTOCOL_CONDITION_MAP = None # or uncomment mapping {
+    #    'EndpointValue X': 'LD PROJECT 1',
+    #    'Endpoin Value Y': 'LD PROJECT 1',
+    #    'Endpoin Value Z': 'LD PROJECT 2'
+    #}
+
+    # Protocol Mapping config per vault.  Specify protocols by cdd_id. Map ids to empty dict {} to exclude
+    # a protocol from the ETL.  Map ids to populated dict to indicate endpoint to include normally
+    # in the ETL AND any endpoints that represent pivot conditions against which the parent protocol
+    # needs to be represented in LiveDesign by distinct assays.  One or more pivot conditions are
+    # supported.  Mark endpoints with code = 0 to indicate regular endpoint.  Mark endpoints with non-zero
+    # code starting wit 1 (e.g. 1,2,3...) to indicate an endpoint is a pivot condition and to control
+    # the order in which condition_strings will be concatenated in the LiveDesign assay name.
+    # Note: With ENABLE_AUTOMATIC_PIVOT_HANDLING = True non-zero codes below will be ignored.
+    PROT_MAP = {
+        9999: {                     # <-- replace with vault_id
+            38757: {             # Example Protocol with 2 pivots
+                416231 : 1,  # First pivot
+                416229 : 2,  # Second pivot
+                416230 : 0,  # EndpointA
+                416234 : 0,  # EndpointB
+                430739 : 0   # EndpointC
+                }
+            }
+        }
+
+    # When pivot config changes are detected either due to change in PROT_MAP or when running with
+    # ENABLED_AUTOMATIC_PIVOT_HANDLING = True automatically mark the protocol to accept the changes
+    # and do a complete reload of data for any affected protocol.
+    AUTOMATIC_FORCE_UPDATE_ON_PIVOT_CONFIG_CHANGE = False
+
+    # Automatic pivot handling: Disable/ignore PROT_MAP pivot handling and have the integration handle this automatically.
+    # Default behavior with AUTOMATIC_PIVOT_HANDLING_SORT_BY_LIST = [] is to order pivots using python sort by endpoint name.
+    # AUTOMATIC_PIVOT_HANDLING_SORT_BY_LIST can also be populated with strings matching endpoint names in preference
+    # first to last.  Any non-matching endpoints will still be ordered using python sort but after list matches.
+    # For example given the following pivot endpoint names from CDD:
+    # ['1', '2', '3', 'a', 'b', 'c', '1a', '2b', 'az', 'by', 'cx', 'a3', 'a2', 'a1']
+    # if AUTOMATIC_PIVOT_HANDLING_SORT_BY_LIST is empty, python sort would result in:
+    # ['1', '1a', '2', '2b', '3', 'a', 'a1', 'a2', 'a3', 'az', 'b', 'by', 'c', 'cx']
+    # With AUTOMATIC_PIVOT_HANDLING_SORT_BY_LIST:
+    # ['a','az','a3']
+    # the resulting ordering would be:
+    # ['a', 'az', 'a3', '1', '1a', '2', '2b', '3', 'a1', 'a2', 'b', 'by', 'c', 'cx']
+    # NOTE: Requires cdd_run --force_update if enabled / disabled or if AUTOMATIC_PIVOT_HANDLING_SORT_BY_LIST is changed after initial set up.
+    ENABLE_AUTOMATIC_PIVOT_HANDLING = False
+    AUTOMATIC_PIVOT_HANDLING_SORT_BY_LIST = []
+
+    # Delimiter to use when concatenating pivot strings to form pivoted assay names. e.g. Assay_pivot1_pivot2 using default '_'.
+    PIVOT_DELIMITER = '_'
+
+    # When a row of protocol data is missing a value for an expected pivot the default behavior is to skip the row
+    # and log the number of skipped rows as a WARNING.  By setting ENABLE_MISSING_PIVOT_HANDLING = true the integration
+    # will create additional pivoted assays that omit the missing pivot condition.
+    ENABLE_MISSING_PIVOT_HANDLING = False
+
+    # Enable support for registering plots
+    ENABLE_PLOT_SUPPORT = False
+
+    # Enable automatic clean up and deduplication of Dose Response Curve assays.
+    # As described in SADEV-2216, the CDD API response of DRC protocol data has
+    # duplicate values for aggregated endpoints because it includes raw data in the json.
+    # Setting CLEANUP_DRC_ASSAYS_FOR_LIVEDESIGN = True will automatically reduce remaining
+    # endpoints to a single value per batch and per experiment (run)
+    # For removal of raw data enpoints (e.g. "Concentration", "%Inhibition", "Activity", etc)
+    # add to the CLEANUP_DRC_ASSAYS_FOR_LIVEDESIGN_IGNORE list.
+    CLEANUP_DRC_ASSAYS_FOR_LIVEDESIGN = False
+    CLEANUP_DRC_ASSAYS_FOR_LIVEDESIGN_IGNORE = []
+
+    # Batch data names to ETL (all others are skipped) as keys with DATA_TYPE as value
+    # Allowed DATA_TYPES are FLOAT, STRING, and DATE.
+    BATCH_FIELDS = {
+        'Field A' : 'FLOAT',
+        'Field B' : 'STRING',
+        'Field C' : 'DATE'
+    }
+
+    # Optional way to rename batch fields from the cdd name to how they should appear in LiveDesign
+    # Leave empty to skip or use commented out example to rename.
+    BATCH_FIELDS_RENAME = {}
+    #BATCH_FIELDS_RENAME = {
+    #        'name_from_cdd': 'Name to use in LiveDesign'
+    #        }
+
+    # Compound level properties to store in compounddata table with with DATA_TYPE as value
+    # Allowed DATA_TYPES are FLOAT, STRING, and DATE.
+    COMPOUND_FIELDS = {
+        'Field A' : 'FLOAT',
+        'Field B' : 'STRING',
+        'Field C' : 'DATE'
+    }
+    # Optional way to rename compound fields from the cdd name to how they should appear in LiveDesign
+    # Leave empty to skip or use commented out example to rename.
+    COMPOUND_FIELDS_RENAME = {}
+    # Example of common use
+    #COMPOUND_FIELDS_RENAME = {
+    #        'cdd_registry_number' : 'CDD Registry Number',
+    #        'owner' : 'Owner',
+    #        'created_at' : 'Date Created',
+    #        'modified_at' : 'Date Modified'
+    #        }
+
+    # If compound level data is stored on batches this will move the batch data into the compounds level property
+    # with DATA_TYPE as value.  Allowed DATA_TYPES are FLOAT, STRING, and DATE.  The batch data will be
+    # reduced to single value and stored in compounddata table rather than batchdata.
+    BATCH_TO_COMPOUND_FIELDS = {}
+    #BATCH_TO_COMPOUND_FIELDS = {
+    #    'Field A' : 'FLOAT',
+    #    'Field B' : 'STRING',
+    #    'Field C' : 'DATE'
+    #}
+
+    # Additional Compound Aliases stored in user defined fields (if none leave as empty list)
+    # Check mol['objects']['udfs'] to find out what field names are defined by customer and enter below
+    # e.g. USER_DEFINED_ALIAS_FIELDS = ['User Defined Field Name 1', 'User Defined Field Name 2']
+    USER_DEFINED_ALIAS_FIELDS = []
+
+    # Normally corporate ID comes from molecule['name'] but if the customer wants to use another compound or
+    # batch level property the following features can be enabled. Otherwise, leave defaults.
+    # Details:
+    # The compound-level property that holds Corporate ID.
+    #     CORP_ID_CMPD_PROP = None or STRING
+    # The batch-level property that holds Corporate ID. Specifying both CORP_ID_CMPD_PROP and CORP_ID_BATCH_PROP is not supported!
+    #     CORP_ID_BATCH_PROP = None or STRING
+    # Whether or not to copy the unused CDD molecule["name"] property to alias list so it appears in All IDs.
+    #     ALIAS_MOLECULE_NAME = BOOLEAN
+    # An optional regex for either molecule or batch id property values. If a molecule or batch does not match this pattern, it will be ignored.  The regex should be written to produce only a single match when used and only the matching portion will be used.
+    #     CORP_ID_REGEX = None or r'REGEX1|REGEX2|etc' ## e.g r'^CMPD-\d+|^LIT-\d+'
+    #
+    # For batch level properties, all batches of a molecule either need to produce the same CORP_ID or no match.
+    # Molecules with inconsistent batch level CORP_IDs will be skipped. Molecules lacking a compound level property,
+    # or where no batch property regex produces a match will also be skipped with a warning written to logs.
+    # Defaults below indicate that normal processing will be used i.e corporate id will come from molecule['name'].
+    CORP_ID_CMPD_PROP = None
+    CORP_ID_BATCH_PROP = None
+    ALIAS_MOLECULE_NAME = False
+    CORP_ID_REGEX = None
+
+    # Enable conversion of file objects from CDD to HTML links in LiveDesign
+    # Useful on systems when LiveDesign users are expected to have CDD GUI access.
+    # Default is 'False' since this may often not be the case.
+    # Note: To ensure that hyperlinks open in new browser tab make sure that LD setting
+    # HTML_WHITELIST includes {...,"a":["href", "target"],...}
+    ENABLE_FILE_URL = False
+
+    # Option to inject additional API parameters into molecule export API call.
+    # Example usage below, allows a customer to only integrate molecules created after a specified date.
+    # Other uses may be found by consulting:
+    # https://support.collaborativedrug.com/hc/en-us/articles/115005685466-Molecule-s-GET-POST-PUT-
+    # Default: Leave as empty dict
+    MOLECULE_EXPORT_PARAMS = {
+        #'created_after': '2020-01-01'
+    }
+
+    # Options to enable customer facing endpoint showing last number of successful cdd_run datetime stamps
+    # ENABLE_CUSTOMER_LAST_SYNC_ENDPOINT writes the last LAST_SYNC_REPORT_LENGTH sync datetime stamps to
+    # /vol/bluebird/seurat/livedesign-jetty/webapps/livedesign/cdd_last_sync
+    # Customer facing endpoint for this is: https://INSTANCE.onschrodinger.com/livedesign/cdd_last_sync
+    # Note: LAST_SYNC_REPORT_LENGTH also controls internal tracking file at:
+    # LAST_SYNC_TRACKING_FILE = '/vol/bluebird/seurat/pro_serv/cdd_integration/tracking/.cdd_last_sync'
+    # which is used to optimize CDD API calls.
+    ENABLE_CUSTOMER_LAST_SYNC_ENDPOINT = False
+    # Timezone for customer facing last sync (use names from pytz.all_timezones)
+    CUSTOMER_TIMEZONE = 'US/Pacific'
+    LAST_SYNC_REPORT_LENGTH = 10
+
+    # Store CDD projects as compounds level property
+    STORE_CDD_PROJECT = False
+
+    # Enable support for registering compounds without molfiles as blinded (structureless) compounds
+    ENABLE_BLINDED_COMPOUNDS = False
+
+    # Maximum number of compounds or protocols allowed to be deleted when running
+    # an full sync. The idea is to set an upper on limit on what is likely to
+    # prevent a bad API call to wipe out db
+    MAX_MOLECULES_ALLOWED_TO_DELETE = 50
+    MAX_PROTOCOLS_ALLOWED_TO_DELETE = 2
+
+    # Option to set the minimum modified_after for incremental updates.
+    # Default minimum is 1 hour which means even if the integration completed a full cdd_run
+    # more recently than 1 hour ago the CDD API will still be queried for molecules with last_modified
+    # datetimes 1 hours or less. Protocol queries are not affected by this setting.
+    MINIMUM_MODIFIED_AFTER = 1
+
+    # For some customers, the volume of their protocol data may become prohibitively time-intensive
+    # to complete async export before we time out our HTTP requests. In this case switching to
+    # concurrent paging of protocol data may be necessary.
+    # NOTE: The CDD API *does not* allow more than 3 concurrent requests per user. For any customers
+    # that have an additional API integration, you should encourage them to create a Schrodinger user
+    # in their Vault so that we do not compete with their concurrency limit.
+    # WARNING!!! If running with ENABLE_CONCURRENT_PAGING on production and staging at the same time,
+    # the production ETL WILL fail!!! Make sure to STOP the cdd ETL after cloning or CHANGE the schedule
+    # on staging!
+    ENABLE_CONCURRENT_PAGING = False
+    MAX_THREADS = 3
+
+    # With ENABLE_CONCURRENT_PAGING = True there can be issues with CDD API calls timing out.
+    # We have found that lowering the page size can help.  The default page_size for the CDD API is
+    # 1000 but we recommend starting at 100.
+    PAGE_SIZE = 100
+
+    # If desired, a list of emails of folks who should receive CRITICAL log messages from the ETL.
+    # For production system, please add at least the email of the primary SA.
+    LOG_RECIPIENTS = []
+
+    # DATABASE declaration
+    DATABASE_ETL = "postgresql://seurat:seurat@localhost:3247/cdd"
+    TEST_DATABASE_ETL = "postgresql://seurat:seurat@localhost:3247/cdd_test"
+
+    # Timeout for async export. Recommended value depends on number of compounds and/or protocol_data, whichever
+    # has the longest API calls.  Should be adjusted upwards as the system grows.  Approximately 1 hr per 100k
+    # compounds can be used to start.
+    ASYNC_TIMEOUT = 3600  # seconds
+{{- end }}
